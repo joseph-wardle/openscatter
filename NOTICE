@@ -1,0 +1,58 @@
+# OpenScatter
+
+OpenScatter is a community-maintained fork of GScatter, a scattering add-on for
+Blender originally developed by Graswald GmbH.
+
+Copyright 2024 Graswald GmbH (original GScatter code)
+Copyright 2026 Joseph Wardle (modifications)
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See `LICENSE` for the full text.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+***
+
+## Modifications
+
+This version was modified from GScatter 0.12.0 (released by Graswald GmbH, 2025).
+The changes are recorded in this project's git history. In summary:
+
+- Renamed the user-facing add-on to "OpenScatter" and changed the extension id.
+  Internal identifiers (operator ids, property groups, node names) are kept so
+  that scenes made with GScatter continue to work.
+- Removed Graswald GmbH branding (logo and tutorial cover art) and third-party
+  brand logos (Discord, YouTube, Twitter/X).
+
+## Trademarks and affiliation
+
+"GScatter" and "Graswald" are names of Graswald GmbH. OpenScatter is not
+affiliated with or endorsed by Graswald GmbH. Graswald is referred to only to
+credit the original work and to describe compatibility with Graswald asset packs.
+Assets downloaded from Graswald's servers remain subject to Graswald's own terms.
+
+***
+
+## Icons
+
+- `custom_rotate`, `custom_wave`, `not_selected`, `selected`, `visibility_on`,
+  `visibility_off` icons in `icons/` are from Google's Material Design Icons
+  (https://fonts.google.com/icons), Apache License 2.0.
+- The `custom_voronoi` icon in `icons/` is "Voronoi Treemap" by loading.io
+  (https://loading.io/).
+- The `search` icon in `icons/` is from Feather Icons by @colebemis
+  (https://feathericons.com/), MIT License.
+
+***
+
+## Bundled third-party software (`wheels/`)
+
+- t3dn-bip 1.0.9 (https://pypi.org/project/t3dn-bip/), GNU General Public License v3
+- jsonschema 4.6.0 (https://pypi.org/project/jsonschema/), MIT License
+- attrs 24.2.0 (https://pypi.org/project/attrs/), MIT License
+- pyrsistent 0.20.0 (https://pypi.org/project/pyrsistent/), MIT License
+- Pillow 11.x (https://pypi.org/project/pillow/), MIT-CMU (HPND) License
