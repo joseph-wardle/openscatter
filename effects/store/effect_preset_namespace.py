@@ -5,8 +5,7 @@ from ...utils.logger import info
 from .effect_preset import EffectPreset
 from ...common.store import AbstractNamespace
 from .. import default
-from jsonschema.validators import validate
-from jsonschema.exceptions import ValidationError
+from ...utils.json_schema import validate, ValidationError
 from . import schema
 
 

@@ -1,5 +1,4 @@
-from jsonschema.validators import validate
-from jsonschema.exceptions import ValidationError
+from ..utils.json_schema import validate, ValidationError
 
 environment_json = {
     "type": "object",

@@ -3,8 +3,7 @@ from .effect_item import Effect
 from ...common.store import AbstractNamespace
 from pathlib import Path
 from ...effects import default
-from jsonschema.validators import validate
-from jsonschema.exceptions import ValidationError
+from ...utils.json_schema import validate, ValidationError
 from . import schema
 import json
 

@@ -2,8 +2,7 @@ from ...utils.logger import debug, info
 from .scatter_system_preset_item import ScatterSystemPreset
 from ...common.store import AbstractNamespace
 from ...effects import default
-from jsonschema.validators import validate
-from jsonschema.exceptions import ValidationError
+from ...utils.json_schema import validate, ValidationError
 from . import schema
 from pathlib import Path
 import json

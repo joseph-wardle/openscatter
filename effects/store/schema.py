@@ -25,12 +25,12 @@ effect = {
 effect_preset = {
     "type": "object",
     "properties": {
-        "id": {"type": "str"},
-        "name": {"type": "str"},
+        "id": {"type": "string"},
+        "name": {"type": "string"},
         "schema_version": {"type": "array"},
-        "effect_id": {"type": "str"},
-        "params": {"type": "str"},
-        "layer_params": {"type": "str"},
+        "effect_id": {"type": "string"},
+        "params": {"type": "string"},
+        "layer_params": {"type": "string"},
     },
 }
 effect_preset_namespace = {

@@ -2,8 +2,7 @@ import json
 
 import bpy
 
-from jsonschema import validate
-from jsonschema.exceptions import ValidationError
+from ...utils.json_schema import validate, ValidationError
 from .. import default
 from . import schema
 from .effect_item import Effect

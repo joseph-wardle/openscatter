@@ -27,6 +27,8 @@ The changes are recorded in this project's git history. In summary:
   that scenes made with GScatter continue to work.
 - Removed Graswald GmbH branding (logo and tutorial cover art) and third-party
   brand logos (Discord, YouTube, Twitter/X).
+- Removed the bundled jsonschema, attrs, pyrsistent and Pillow packages.
+- Fixes for Blender 5.x.
 
 ## Trademarks and affiliation
 
@@ -52,7 +54,3 @@ Assets downloaded from Graswald's servers remain subject to Graswald's own terms
 ## Bundled third-party software (`wheels/`)
 
 - t3dn-bip 1.0.9 (https://pypi.org/project/t3dn-bip/), GNU General Public License v3
-- jsonschema 4.6.0 (https://pypi.org/project/jsonschema/), MIT License
-- attrs 24.2.0 (https://pypi.org/project/attrs/), MIT License
-- pyrsistent 0.20.0 (https://pypi.org/project/pyrsistent/), MIT License
-- Pillow 11.x (https://pypi.org/project/pillow/), MIT-CMU (HPND) License
