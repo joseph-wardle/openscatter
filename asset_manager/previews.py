@@ -12,7 +12,9 @@ def get(path: str) -> bpy.types.ImagePreview:
 
 def register():
     global collection
-    collection = previews.new(max_size=(1024, 1024))
+    # Lazy loading reads previews on non-daemon threads that are only stopped by
+    # a UI timer, so in background mode Blender would never exit.
+    collection = previews.new(max_size=(1024, 1024), lazy_load=not bpy.app.background)
 
 
 def unregister():
