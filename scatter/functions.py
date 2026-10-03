@@ -63,7 +63,7 @@ def create_point_mask_node_tree() -> bpy.types.GeometryNodeTree:
     group = effects.utils.trees.get_effect_nodetree("internal.distribution_mask")
 
     random_value = group.nodes["Random Value"]
-    random_value.inputs[8].default_value = randint(0, 10000)
+    random_value.inputs["Seed"].default_value = randint(0, 10000)
 
     return group
 
