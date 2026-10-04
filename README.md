@@ -35,6 +35,25 @@ blender --command extension build --source-dir . --output-dir dist
 Install the resulting `.zip` via *Edit → Preferences → Get Extensions →
 Install from Disk*.
 
+## Testing
+
+```sh
+python testing/run_tests.py                          # uses `blender` on PATH
+python testing/run_tests.py --blender /path/to/blender smoke
+```
+
+This builds the extension and installs it into a throwaway Blender profile,
+so your own setup isn't touched. Then it runs:
+
+- `smoke`: the extension enables, scatters, and every effect can be added,
+  and nothing would stop background Blender from exiting.
+- `effects`: each effect, added alone to a fresh scatter, gives the same
+  result as `testing/reference/effects.json`. That file was recorded from the
+  original GScatter 0.12.0 on Blender 4.2; see `testing/run_tests.py` for how
+  to record it again.
+
+Run it against every Blender version you support, especially new releases.
+
 ## License
 
 GPL-3.0-or-later. See [`LICENSE`](LICENSE).

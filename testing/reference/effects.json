@@ -1,0 +1,395 @@
+{
+ "base": {
+  "checksum": 760.443,
+  "instances": 100
+ },
+ "blender": "4.2.23 LTS",
+ "effects": {
+  "0d2a8eb9922d4515b758a8c343588d67@1.0.0": {
+   "checksum": 483.324,
+   "instances": 61,
+   "name": "Voronoi Texture"
+  },
+  "0d2a8eb9922d4515b758a8c343588d67@2.0.1": {
+   "checksum": 483.324,
+   "instances": 61,
+   "name": "Voronoi Texture"
+  },
+  "3a136d19f4a9472fbe8f703a6f6563a4@1.0.0": {
+   "checksum": 385.325,
+   "instances": 49,
+   "name": "Gradient Texture"
+  },
+  "3a136d19f4a9472fbe8f703a6f6563a4@2.0.0": {
+   "checksum": 385.325,
+   "instances": 49,
+   "name": "Gradient Texture"
+  },
+  "3bf647d5becd4c58ac2564d559a606ee@1.0.0": {
+   "checksum": 407.805,
+   "instances": 52,
+   "name": "Noise Texture"
+  },
+  "3bf647d5becd4c58ac2564d559a606ee@2.0.0": {
+   "checksum": 407.805,
+   "instances": 52,
+   "name": "Noise Texture"
+  },
+  "3bf647d5becd4c58ac2564d559a606ee@2.0.1": {
+   "checksum": 407.805,
+   "instances": 52,
+   "name": "Noise Texture"
+  },
+  "773eb24afbef4aacb2d4e88a9b682b0c@1.0.0": {
+   "checksum": 520.745,
+   "instances": 66,
+   "name": "Magic Texture"
+  },
+  "773eb24afbef4aacb2d4e88a9b682b0c@2.0.0": {
+   "checksum": 520.745,
+   "instances": 66,
+   "name": "Magic Texture"
+  },
+  "773eb24afbef4aacb2d4e88a9b682b0c@2.0.1": {
+   "checksum": 520.745,
+   "instances": 66,
+   "name": "Magic Texture"
+  },
+  "b62a053b30714ffbac3ad642e40f0454@1.0.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Assign Material"
+  },
+  "c8e0b4e771ab4bf784d4afb425c99dcc@1.0.0": {
+   "checksum": 305.847,
+   "instances": 40,
+   "name": "Brick Texture"
+  },
+  "c8e0b4e771ab4bf784d4afb425c99dcc@2.0.0": {
+   "checksum": 305.847,
+   "instances": 40,
+   "name": "Brick Texture"
+  },
+  "c8e0b4e771ab4bf784d4afb425c99dcc@2.0.1": {
+   "checksum": 305.847,
+   "instances": 40,
+   "name": "Brick Texture"
+  },
+  "e623fc66b5c243f189bc6276e80f0fe7@1.0.0": {
+   "checksum": 784.517,
+   "instances": 100,
+   "name": "Terrain Generator"
+  },
+  "system.align_to_normal@2.0.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Align to Normal"
+  },
+  "system.align_to_normal@2.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Align to Normal"
+  },
+  "system.align_to_normal@2.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Align to Normal"
+  },
+  "system.distribute_on_faces@1.1.0": {
+   "checksum": 1546.242,
+   "instances": 200,
+   "name": "Distribute on Faces"
+  },
+  "system.distribute_on_faces@2.1.0": {
+   "checksum": 1546.242,
+   "instances": 200,
+   "name": "Distribute on Faces"
+  },
+  "system.distribute_on_faces@2.1.1": {
+   "checksum": 1546.242,
+   "instances": 200,
+   "name": "Distribute on Faces"
+  },
+  "system.distribute_on_vertices@1.1.0": {
+   "checksum": 852.373,
+   "instances": 109,
+   "name": "Distribute on Vertices"
+  },
+  "system.distribute_on_vertices@2.1.0": {
+   "checksum": 852.373,
+   "instances": 109,
+   "name": "Distribute on Vertices"
+  },
+  "system.distribute_on_vertices@2.1.1": {
+   "checksum": 852.373,
+   "instances": 109,
+   "name": "Distribute on Vertices"
+  },
+  "system.height@1.1.0": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Height"
+  },
+  "system.height@2.0.0": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Height"
+  },
+  "system.image@1.1.0": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Image"
+  },
+  "system.image@2.0.0": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Image"
+  },
+  "system.image@2.0.1": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Image"
+  },
+  "system.instance_collection@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Instance Collection"
+  },
+  "system.instance_collection@2.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Instance Collection"
+  },
+  "system.instance_collection@2.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Instance Collection"
+  },
+  "system.instance_object@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Instance Object"
+  },
+  "system.instance_object@1.2.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Instance Object"
+  },
+  "system.instance_object@1.2.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Instance Object"
+  },
+  "system.look_at@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Look At"
+  },
+  "system.look_at@1.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Look At"
+  },
+  "system.musgrave@1.1.0": {
+   "checksum": 88.366,
+   "instances": 11,
+   "name": "Musgrave"
+  },
+  "system.musgrave@2.0.0": {
+   "checksum": 88.366,
+   "instances": 11,
+   "name": "Musgrave"
+  },
+  "system.musgrave@2.0.1": {
+   "checksum": 88.366,
+   "instances": 11,
+   "name": "Musgrave"
+  },
+  "system.proximity@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Proximity"
+  },
+  "system.proximity@1.2.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Proximity"
+  },
+  "system.proximity@2.0.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Proximity"
+  },
+  "system.proximity_rotation@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Proximity"
+  },
+  "system.proximity_rotation@1.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Proximity"
+  },
+  "system.randomize@1.1.0": {
+   "checksum": 701.272,
+   "instances": 100,
+   "name": "Randomize"
+  },
+  "system.randomize@1.2.0": {
+   "checksum": 701.272,
+   "instances": 100,
+   "name": "Randomize"
+  },
+  "system.randomize@1.2.1": {
+   "checksum": 701.272,
+   "instances": 100,
+   "name": "Randomize"
+  },
+  "system.randomize_rotation@1.1.0": {
+   "checksum": 760.994,
+   "instances": 100,
+   "name": "Randomize Rotation"
+  },
+  "system.randomize_rotation@1.2.0": {
+   "checksum": 760.994,
+   "instances": 100,
+   "name": "Randomize Rotation"
+  },
+  "system.randomize_rotation@1.2.1": {
+   "checksum": 760.994,
+   "instances": 100,
+   "name": "Randomize Rotation"
+  },
+  "system.randomize_translation@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Randomize Translation"
+  },
+  "system.randomize_translation@1.2.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Randomize Translation"
+  },
+  "system.randomize_translation@1.2.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Randomize Translation"
+  },
+  "system.randomize_xyz@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Randomize XYZ"
+  },
+  "system.randomize_xyz@1.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Randomize XYZ"
+  },
+  "system.randomize_xyz@1.1.2": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Randomize XYZ"
+  },
+  "system.rotate@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Rotate"
+  },
+  "system.rotate@1.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Rotate"
+  },
+  "system.scale@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Scale"
+  },
+  "system.scale@1.1.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Scale"
+  },
+  "system.slope@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Slope"
+  },
+  "system.slope@2.0.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Slope"
+  },
+  "system.slope@2.0.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Slope"
+  },
+  "system.translate@1.1.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Translate"
+  },
+  "system.translate@1.2.0": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Translate"
+  },
+  "system.translate@1.2.1": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Translate"
+  },
+  "system.translate@1.2.2": {
+   "checksum": 760.443,
+   "instances": 100,
+   "name": "Translate"
+  },
+  "system.waves@1.1.0": {
+   "checksum": 368.635,
+   "instances": 49,
+   "name": "Wave"
+  },
+  "system.waves@2.0.0": {
+   "checksum": 368.635,
+   "instances": 49,
+   "name": "Wave"
+  },
+  "system.weight_mask@1.1.0": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Weight Mask"
+  },
+  "system.weight_mask@2.0.0": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Weight Mask"
+  },
+  "system.weight_mask@2.0.1": {
+   "checksum": 0.0,
+   "instances": 0,
+   "name": "Weight Mask"
+  },
+  "system.wind@1.1.0": {
+   "checksum": 788.947,
+   "instances": 100,
+   "name": "Wind"
+  },
+  "system.wind@2.0.0": {
+   "checksum": 788.947,
+   "instances": 100,
+   "name": "Wind"
+  },
+  "system.wind@2.1.0": {
+   "checksum": 788.947,
+   "instances": 100,
+   "name": "Wind"
+  },
+  "system.wind@2.1.1": {
+   "checksum": 788.947,
+   "instances": 100,
+   "name": "Wind"
+  }
+ },
+ "recorded_with": "gscatter-0.12.0.zip"
+}
