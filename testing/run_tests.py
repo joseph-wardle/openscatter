@@ -6,14 +6,23 @@
 
 Tests:
   smoke    The extension enables, scatters, and every effect can be added.
-  effects  Each effect, added alone to a fresh scatter, gives the same instance
-           count and transforms as in reference/effects.json.
+  effects  Each effect version, added alone to a fresh scatter in each of its
+           categories, gives the same instance count and transforms as in
+           reference/effects.json, with default settings and with influence,
+           invert and each blend type changed in turn.
 
-reference/effects.json was recorded from the original GScatter 0.12.0 on
-Blender 4.2, where GScatter worked as designed. To record it again:
+reference/effects.json is from the original GScatter 0.12.0, run on the Blender
+major version each effect was saved with: 3.6 for effects saved in Blender 3.x
+(GScatter on 4.x drops some of their links) and 4.2 for those saved in 4.x.
+To record it again, run both; each run replaces only its own effects:
 
+    python testing/run_tests.py --blender <blender 3.6> \\
+        --extension-zip gscatter-0.12.0.zip --update-reference effects
     python testing/run_tests.py --blender <blender 4.2> \\
         --extension-zip gscatter-0.12.0.zip --update-reference effects
+
+Blender before 4.2 has no extensions, so there the zip is installed as a
+legacy add-on, with its pure-Python wheels unpacked next to it.
 """
 
 import argparse
@@ -56,6 +65,31 @@ def extension_id(zip_path: Path) -> str:
     return re.search(r'^id\s*=\s*"([^"]+)"', manifest, re.M).group(1)
 
 
+def install(blender: str, zip_path: Path, version: tuple, env: dict, timeout: int) -> str:
+    """Install the zip into the profile in env. Returns the add-on's module."""
+    if version >= (4, 2):
+        code, out = run(
+            [blender, "-b", "--command", "extension", "install-file",
+             "-r", "user_default", "-e", str(zip_path)],
+            env, timeout,
+        )
+        if code != 0:
+            sys.exit("Install failed:\n" + out)
+        return "bl_ext.user_default." + extension_id(zip_path)
+
+    addons = Path(env["BLENDER_USER_RESOURCES"]) / "scripts" / "addons"
+    with zipfile.ZipFile(zip_path) as z:
+        top = {n.split("/")[0] for n in z.namelist()}
+        if len(top) != 1:
+            sys.exit(f"{zip_path.name} has no top-level folder to install as a legacy add-on")
+        module = top.pop()
+        z.extractall(addons)
+    for wheel in (addons / module / "wheels").glob("*-none-any.whl"):
+        with zipfile.ZipFile(wheel) as z:
+            z.extractall(addons / "modules")
+    return module
+
+
 def blender_version(blender: str) -> tuple:
     _, out = run([blender, "--version"], dict(os.environ), 60)
     match = re.search(r"Blender (\d+)\.(\d+)", out)
@@ -78,9 +112,45 @@ def check_smoke(result: dict) -> list[str]:
     return errors
 
 
+def same_major(saved_with: list, version: tuple) -> bool:
+    return saved_with[0] == version[0]
+
+
+def update_reference(result: dict, version: tuple, zip_path: Path):
+    """Replace the reference's results for effects saved with this Blender
+    major version, keeping the others."""
+    reference = json.loads(REFERENCE.read_text()) if REFERENCE.exists() else {}
+    saved_with = {**reference.get("saved_with", {}), **result["saved_with"]}
+    effects = {
+        key: value
+        for key, value in reference.get("effects", {}).items()
+        if not same_major(saved_with[key.split(" ")[0]], version)
+    }
+    recorded = 0
+    for key, value in result["effects"].items():
+        if same_major(saved_with[key.split(" ")[0]], version):
+            effects[key] = value
+            recorded += 1
+    if reference.get("base") not in (None, result["base"]):
+        print(f"  note: plain scatter differs from the existing reference: {reference['base']}")
+    recorded_with = reference.get("recorded_with", {})
+    recorded_with[f"saved with Blender {version[0]}.x"] = (
+        f"{zip_path.name} on Blender {result['blender']}"
+    )
+    REFERENCE.parent.mkdir(exist_ok=True)
+    REFERENCE.write_text(json.dumps(
+        {"base": result["base"], "effects": effects, "recorded_with": recorded_with,
+         "saved_with": saved_with},
+        indent=1, sort_keys=True,
+    ) + "\n")
+    print(f"Saved {recorded} results to {REFERENCE.relative_to(REPO)}")
+
+
 def check_effects(result: dict, version: tuple) -> tuple[list[str], list[str]]:
     reference = json.loads(REFERENCE.read_text())
-    errors, notes = [], []
+    errors = []
+    # Notes are grouped per effect version, as most apply to all its results.
+    notes = {}
 
     def same(a: dict, b: dict) -> bool:
         return (
@@ -100,16 +170,25 @@ def check_effects(result: dict, version: tuple) -> tuple[list[str], list[str]]:
     for key, expected in reference["effects"].items():
         got = result["effects"].get(key)
         label = f"{expected['name']} ({key})"
+        effect = f"{expected['name']} ({key.split(' ')[0]})"
         if got is None:
             errors.append(f"{label}: missing")
+        elif expected.get("error"):
+            # GScatter itself failed here, so there's nothing to compare with.
+            if got.get("error"):
+                notes.setdefault(effect, set()).add("fails, as it did in GScatter")
+            else:
+                notes.setdefault(effect, set()).add("works, but failed in GScatter")
         elif not same(got, expected):
             known = KNOWN_DIFFERENCES.get(key.split("@")[0])
             if known and version >= known[0]:
-                notes.append(f"{label}: differs as expected ({known[1]})")
+                notes.setdefault(effect, set()).add(f"differs as expected: {known[1]}")
             else:
                 errors.append(f"{label}: expected {show(expected)}, got {show(got)}")
     for key in result["effects"].keys() - reference["effects"].keys():
-        notes.append(f"{key}: not in the reference, not checked")
+        notes.setdefault(key.split(" ")[0], set()).add("not in the reference, not checked")
+    notes = [f"{effect}: {message}" for effect, messages in sorted(notes.items())
+             for message in sorted(messages)]
     return errors, notes
 
 
@@ -132,8 +211,11 @@ def main():
         tmp = Path(tmp)
         env = dict(os.environ, BLENDER_USER_RESOURCES=str(tmp / "profile"))
 
+        version = blender_version(args.blender)
         zip_path = args.extension_zip
         if zip_path is None:
+            if version < (4, 2):
+                sys.exit("Blender before 4.2 can't build extensions; pass --extension-zip")
             code, out = run(
                 [args.blender, "--command", "extension", "build",
                  "--source-dir", str(REPO), "--output-dir", str(tmp)],
@@ -143,18 +225,8 @@ def main():
             if code != 0 or not zips:
                 sys.exit("Build failed:\n" + out)
             zip_path = zips[0]
-        ext_id = extension_id(zip_path)
-
-        code, out = run(
-            [args.blender, "-b", "--command", "extension", "install-file",
-             "-r", "user_default", "-e", str(zip_path)],
-            env, args.timeout,
-        )
-        if code != 0:
-            sys.exit("Install failed:\n" + out)
-
-        version = blender_version(args.blender)
-        print(f"Testing {zip_path.name} ({ext_id}) on Blender {version[0]}.{version[1]}")
+        module = install(args.blender, zip_path, version, env, args.timeout)
+        print(f"Testing {zip_path.name} ({module}) on Blender {version[0]}.{version[1]}")
         failed = False
         for test in tests:
             output = tmp / f"{test}.json"
@@ -162,7 +234,7 @@ def main():
                 code, log = run(
                     [args.blender, "-b", "--python-exit-code", "1",
                      "--python", str(TESTING / "blender_tests.py"),
-                     "--", ext_id, test, str(output)],
+                     "--", module, test, str(output)],
                     env, args.timeout,
                 )
             except subprocess.TimeoutExpired:
@@ -182,11 +254,7 @@ def main():
             elif test == "smoke":
                 errors = check_smoke(result)
             elif args.update_reference:
-                REFERENCE.parent.mkdir(exist_ok=True)
-                del result["enabled"], result["blocking_threads"]
-                result["recorded_with"] = zip_path.name
-                REFERENCE.write_text(json.dumps(result, indent=1, sort_keys=True) + "\n")
-                print(f"Saved {len(result['effects'])} effects to {REFERENCE.relative_to(REPO)}")
+                update_reference(result, version, zip_path)
                 continue
             else:
                 errors, notes = check_effects(result, version)

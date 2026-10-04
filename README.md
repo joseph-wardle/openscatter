@@ -47,12 +47,16 @@ so your own setup isn't touched. Then it runs:
 
 - `smoke`: the extension enables, scatters, and every effect can be added,
   and nothing would stop background Blender from exiting.
-- `effects`: each effect, added alone to a fresh scatter, gives the same
-  result as `testing/reference/effects.json`. That file was recorded from the
-  original GScatter 0.12.0 on Blender 4.2; see `testing/run_tests.py` for how
-  to record it again.
+- `effects`: every version of every effect, added alone to a fresh scatter
+  in each of its categories, gives the same result as
+  `testing/reference/effects.json`, with default settings and with influence,
+  invert and each blend type changed in turn. That file was recorded from the
+  original GScatter 0.12.0 on the Blender each effect was made for (3.6 for
+  effects saved in Blender 3.x, 4.2 for those saved in 4.x); see
+  `testing/run_tests.py` for how to record it again.
 
-Run it against every Blender version you support, especially new releases.
+GitHub Actions runs both on Blender 4.2 and 5.2 for every push. Run them
+yourself against any other version you support, especially new releases.
 
 ## License
 

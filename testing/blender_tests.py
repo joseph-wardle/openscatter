@@ -1,6 +1,6 @@
 """Tests that run inside Blender. Use run_tests.py rather than running this directly.
 
-    blender -b --python blender_tests.py -- <extension id> <smoke|effects> <output.json>
+    blender -b --python blender_tests.py -- <add-on module> <smoke|effects> <output.json>
 
 Writes the results as JSON; run_tests.py decides whether they pass.
 """
@@ -92,24 +92,57 @@ def smoke(module: str) -> dict:
     return result
 
 
+def add_effect_version(module: str, effect, category: str):
+    """Add this exact effect version to a category, as the add_effect operator
+    does for the newest version. Returns the effect layer."""
+    utils = importlib.import_module(module + ".effects.utils")
+    getters = importlib.import_module(module + ".utils.getters")
+    bpy.context.scene.gscatter.active_category = category
+    category_tree = getters.get_node_tree(bpy.context).nodes[category].node_tree
+    return utils.add_effect(
+        effect.nodetree, category_tree, category, effect.id, effect.effect_version
+    )
+
+
+def settings(effect, layer) -> list:
+    """(label, layer property, value) for each non-default mix setting."""
+    result = [("influence 50", "influence", 50), ("invert", "invert", True)]
+    for blend_type in effect.blend_types:
+        if blend_type != layer.blend_type:
+            result.append((f"blend {blend_type}", "blend_type", blend_type))
+    return result
+
+
 def effects(module: str) -> dict:
-    """Fingerprint each effect version added alone to a fresh scatter."""
+    """Fingerprint each effect version in each of its categories, alone on a
+    fresh scatter, first with default settings and then with each mix setting
+    changed in turn."""
     scatter()
-    result = {"base": fingerprint(), "effects": {}}
+    result = {"base": fingerprint(), "effects": {}, "saved_with": {}}
     for effect in user_effects(module):
-        key = f"{effect.id}@{effect.version_str}"
-        try:
-            scatter()
-            add_effect(effect)
-            result["effects"][key] = {"name": effect.name, **fingerprint()}
-        except Exception as e:
-            result["effects"][key] = {"name": effect.name, "error": error_message(e)}
+        result["saved_with"][f"{effect.id}@{effect.version_str}"] = list(
+            effect.blender_version[:2]
+        )
+        for category in effect.categories:
+            prefix = f"{effect.id}@{effect.version_str} {category}"
+            key = prefix + " default"
+            try:
+                scatter()
+                layer = add_effect_version(module, effect, category)
+                result["effects"][key] = {"name": effect.name, **fingerprint()}
+                for label, prop, value in settings(effect, layer):
+                    key = f"{prefix} {label}"
+                    old = getattr(layer, prop)
+                    setattr(layer, prop, value)
+                    result["effects"][key] = {"name": effect.name, **fingerprint()}
+                    setattr(layer, prop, old)
+            except Exception as e:
+                result["effects"][key] = {"name": effect.name, "error": error_message(e)}
     return result
 
 
 def main():
-    ext_id, test, output = sys.argv[sys.argv.index("--") + 1 :]
-    module = "bl_ext.user_default." + ext_id
+    module, test, output = sys.argv[sys.argv.index("--") + 1 :]
     result = {"blender": bpy.app.version_string}
     try:
         bpy.ops.preferences.addon_enable(module=module)
