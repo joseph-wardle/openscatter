@@ -10,17 +10,14 @@ Graswald GmbH. See [`NOTICE`](NOTICE) for credits and licensing.
 
 ## Status
 
-Work in progress: porting to Blender 5.x. Known issues on Blender 5.2:
+Works on Blender 4.2 to 5.2. Every bundled effect gives the same result on
+5.2 as GScatter 0.12.0 does on 4.2, except Voronoi Texture, because Blender
+5.x changed the output of the 4D Voronoi node itself.
 
-- The bundled Pillow wheels are built for Python 3.11, so Blender refuses to
-  enable the extension.
-- The bundled `attrs` wheel conflicts with Blender's own extension system.
-- Scattering fails because the Random Value node is indexed by socket position
-  (`scatter/functions.py`).
-- Effect node trees lose links whose socket identifiers changed in 5.x, such as
-  `A_STR`/`B_STR` on Compare nodes.
-- With the add-on enabled, `blender -b` never exits because the `t3dn_bip`
-  reader threads aren't daemon threads.
+Effects are stored as JSON node trees from older Blender versions and are
+upgraded when loaded (`effects/store/legacy.py`). If a future Blender
+version renames node sockets or changes node defaults, that is where to add
+the mapping.
 
 ## Compatibility with GScatter scenes
 
