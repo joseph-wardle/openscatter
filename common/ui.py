@@ -4,7 +4,9 @@ from .. import utils
 from .ops import CloseCompatibilityWarningOperator
 from .props import WindowManagerProps
 
-_COMPATIBILITY_MSG = "Blender version {} might not be supported. Please use either Blender version 3.5 - 4.5 stable and upwards."
+# Oldest supported and newest tested Blender versions (major, minor).
+_SUPPORTED_VERSIONS = ((4, 2), (5, 2))
+_COMPATIBILITY_MSG = "Blender version {} might not be supported. Please use a stable release of Blender {}.{} - {}.{}."
 
 
 class BasePanel(bpy.types.Panel):
@@ -25,10 +27,9 @@ class CompatibilityPanel(BasePanel):
         return (
             (not prefs.ignore_compatibility_warning)
             and not wm_props.compatibility_warning
-            and not (bpy.app.version >= (3, 5, 0) or bpy.app.version <= (4, 5, 0))
             and (
-                bpy.app.version_string.endswith("Alpha")
-                or bpy.app.version_string.endswith("Beta")
+                not _SUPPORTED_VERSIONS[0] <= bpy.app.version[:2] <= _SUPPORTED_VERSIONS[1]
+                or bpy.app.version_cycle != "release"
             )
         )
 
@@ -39,7 +40,10 @@ class CompatibilityPanel(BasePanel):
         text_col.scale_y = 1.2
         width = context.region.width
         for text in utils.wrap_text(
-            _COMPATIBILITY_MSG.format(bpy.app.version_string), width
+            _COMPATIBILITY_MSG.format(
+                bpy.app.version_string, *_SUPPORTED_VERSIONS[0], *_SUPPORTED_VERSIONS[1]
+            ),
+            width,
         ):
             text_col.label(text=text)
         row = layout.row()

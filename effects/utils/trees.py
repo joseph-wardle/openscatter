@@ -251,30 +251,20 @@ def get_group_output_node(node_tree: bpy.types.GeometryNodeTree):
 
 
 def create_mix_inputs(effect):
-    influence_input = effect.group_node.inputs.get(default.INPUT_INFLUENCE)
-    blendtype_input = effect.group_node.inputs.get(default.INPUT_BLEND_TYPE)
-    invert_input = effect.group_node.inputs.get(default.INPUT_INVERT)
-
-    if influence_input is None:
-        effect.group_node.node_tree.inputs.new(
-            type="NodeSocketFloat", name=default.INPUT_INFLUENCE
-        )
-        influence_input = effect.group_node.inputs.get(default.INPUT_INFLUENCE)
-    influence_input.default_value = effect.influence / 100
-
-    if blendtype_input is None:
-        effect.group_node.node_tree.inputs.new(
-            type="NodeSocketString", name=default.INPUT_BLEND_TYPE
-        )
-        blendtype_input = effect.group_node.inputs.get(default.INPUT_BLEND_TYPE)
-    blendtype_input.default_value = effect.blend_type
-
-    if invert_input is None:
-        effect.group_node.node_tree.inputs.new(
-            type="NodeSocketBool", name=default.INPUT_INVERT
-        )
-        invert_input = effect.group_node.inputs.get(default.INPUT_INVERT)
-    invert_input.default_value = effect.invert
+    group_node = effect.group_node
+    values = (
+        (default.INPUT_INFLUENCE, "NodeSocketFloat", effect.influence / 100),
+        (default.INPUT_BLEND_TYPE, "NodeSocketString", effect.blend_type),
+        (default.INPUT_INVERT, "NodeSocketBool", effect.invert),
+    )
+    for name, socket_type, value in values:
+        socket = group_node.inputs.get(name)
+        if socket is None:
+            group_node.node_tree.interface.new_socket(
+                name=name, in_out="INPUT", socket_type=socket_type
+            )
+            socket = group_node.inputs.get(name)
+        socket.default_value = value
 
 
 def update_subivide_node(main_tree: bpy.types.GeometryNodeTree):
