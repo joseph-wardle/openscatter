@@ -9,7 +9,7 @@ maintainer = "Joseph Wardle <josephwardle02@gmail.com>"
 type = "add-on"
 
 # Optional link to documentation, support, source files, etc
-# website = "https://github.com/<you>/openscatter"
+website = "https://github.com/joseph-wardle/openscatter"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
