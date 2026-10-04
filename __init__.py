@@ -12,7 +12,7 @@ bl_info = {
     "description": "Geometry-nodes scattering tools (community fork of GScatter)",
     "location": "View3D > Sidebar > OpenScatter & Geo-Nodes > Sidebar > OpenScatter",
     "author": "Joseph Wardle, based on GScatter by Graswald GmbH",
-    "version": (0, 12, 0),
+    "version": (0, 13, 0),
     "blender": (3, 5, 0),
     "support": "COMMUNITY",
     "category": "",

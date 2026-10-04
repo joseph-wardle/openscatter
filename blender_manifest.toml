@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "openscatter"
-version = "0.12.0"
+version = "0.13.0"
 name = "OpenScatter"
 tagline = "Geometry-nodes scattering tools, a community fork of GScatter"
 maintainer = "Joseph Wardle <josephwardle02@gmail.com>"
@@ -69,6 +69,7 @@ paths_exclude_pattern = [
   "build.py",
   "exclude.txt",
   "README.md",
+  "CHANGELOG.md",
   "CODE_OF_CONDUCT.md",
   "BUILD.md",
   "requirements.txt",
