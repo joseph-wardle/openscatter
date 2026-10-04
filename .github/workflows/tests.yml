@@ -1,0 +1,59 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Blender ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Oldest and newest supported versions. Checksums are from
+          # https://download.blender.org/release/; update both when bumping.
+          - version: 4.2.23
+            sha256: bea0eb3146be13eae6225409a117b215184f41b7f79e799f97cb3abb8f6dc404
+          - version: 5.2.2
+            sha256: 84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Blender's system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libsm6 libxfixes3 libxi6 libxkbcommon0 libxrender1 libxxf86vm1
+
+      - name: Cache Blender
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/blender.tar.xz
+          key: blender-${{ matrix.version }}-${{ matrix.sha256 }}
+
+      # download.blender.org blocks CI runners, so use one of its mirrors.
+      - name: Download Blender
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          VERSION: ${{ matrix.version }}
+        run: |
+          series="${VERSION%.*}"
+          curl -fsSL --retry 3 -o ~/blender.tar.xz \
+            "https://ftp.nluug.nl/pub/graphics/blender/release/Blender${series}/blender-${VERSION}-linux-x64.tar.xz"
+
+      - name: Unpack Blender
+        env:
+          SHA256: ${{ matrix.sha256 }}
+        run: |
+          echo "$SHA256  $HOME/blender.tar.xz" | sha256sum -c -
+          mkdir ~/blender
+          tar -xJf ~/blender.tar.xz -C ~/blender --strip-components=1
+
+      - name: Run tests
+        run: python3 testing/run_tests.py --blender ~/blender/blender
