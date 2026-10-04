@@ -2,7 +2,7 @@ from ...utils.logger import debug
 from ...common.store import AbstractStoreItem
 from typing import Union, Any
 import bpy
-from .utils import get_input_from_identifier, get_output_from_identifier
+from .legacy import find_socket, upgrade_node, upgrade_node_data
 
 EXCLUDE_PROPS = {"bl_rna"}
 
@@ -140,11 +140,15 @@ class Effect(AbstractStoreItem):
                 node.mapping.curves[0].points[-1].handle_type = point_last[1]
                 node.mapping.curves[0].points[-1].location = point_last[0]
 
+        upgrade_node(node, node_data)
+
     def _node_group_from_dict(
         self, data: dict, name: str = None
     ) -> bpy.types.GeometryNodeTree:
         name: str = name if name else data["name"]
-        nodes: list[dict] = data["nodes"]
+        nodes: list[dict] = [
+            upgrade_node_data(n, self.blender_version) for n in data["nodes"]
+        ]
         inputs: list[dict] = data["inputs"]
         outputs: list[dict] = data["outputs"]
 
@@ -204,6 +208,22 @@ class Effect(AbstractStoreItem):
         # Create Nodes in node_tree
         for node_data in nodes:
             self._node_from_dict(group, node_data)
+
+        group_inputs, group_outputs = inputs, outputs
+
+        def old_identifiers(node_data: dict, is_output: bool) -> list[str]:
+            # Stored identifiers of group interface sockets, in order.
+            if node_data["type"] == "NodeGroupInput":
+                sockets = group_inputs if is_output else []
+            elif node_data["type"] == "NodeGroupOutput":
+                sockets = [] if is_output else group_outputs
+            elif "node_group" in node_data:
+                sockets = node_data["node_group"]["outputs" if is_output else "inputs"]
+            else:
+                sockets = []
+            return [s.get("identifier") for s in sockets]
+
+        nodes_by_name = {n["name"]: n for n in nodes}
         for node_data in nodes:
             node: bpy.types.Node = group.nodes[node_data["name"]]
             inputs: list = node_data.get("inputs", [])
@@ -221,13 +241,9 @@ class Effect(AbstractStoreItem):
                 ) and bpy.app.version >= (4, 1, 0):
                     input_socket = input_socket.split("_")[0]
 
-                if node.type in ["GROUP_INPUT", "GROUP_OUTPUT", "GROUP"]:
-                    try:
-                        socket = node.inputs[input_socket]
-                    except Exception:
-                        socket = get_input_from_identifier(node.inputs, input_socket)
-                else:
-                    socket = get_input_from_identifier(node.inputs, input_socket)
+                socket = find_socket(
+                    node, input_socket, False, old_identifiers(node_data, False)
+                )
 
                 # if socket is None:
                 #     continue
@@ -248,19 +264,12 @@ class Effect(AbstractStoreItem):
                         from_node, bpy.types.GeometryNodeSwitch
                     ) and bpy.app.version >= (4, 1, 0):
                         from_node_socket = from_node_socket.split("_")[0]
-                    if from_node.type in ["GROUP_INPUT", "GROUP_OUTPUT", "GROUP"]:
-                        try:
-                            source = group.nodes[from_node_name].outputs[
-                                from_node_socket
-                            ]
-                        except Exception:
-                            source = get_output_from_identifier(
-                                group.nodes[from_node_name].outputs, from_node_socket
-                            )
-                    else:
-                        source = get_output_from_identifier(
-                            group.nodes[from_node_name].outputs, from_node_socket
-                        )
+                    source = find_socket(
+                        from_node,
+                        from_node_socket,
+                        True,
+                        old_identifiers(nodes_by_name[from_node_name], True),
+                    )
 
                     # if source is None:
                     #     continue
@@ -270,7 +279,7 @@ class Effect(AbstractStoreItem):
                         group.links.new(source, socket)
                     except Exception as e:
                         debug(
-                            f"Failed to create socket connection {source} {socket}\n {e}"
+                            f"Failed to link {from_node_name}:{from_node_socket} -> {node.name}:{input_socket} in {name}\n {e}"
                         )
         return group
 
