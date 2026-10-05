@@ -1,6 +1,6 @@
-from . import ops, prefs, props, queue, ui, callback
+from . import ops, prefs, props, ui, callback
 
-modules = (queue, props, prefs, ops, ui, callback)
+modules = (props, prefs, ops, ui, callback)
 
 
 def register():
