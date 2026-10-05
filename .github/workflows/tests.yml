@@ -22,7 +22,7 @@ jobs:
             sha256: 84098912789dc450e95697c4184fb8a90acbe5111c2ba4aede3fecb57806a168
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Blender's system libraries
         run: |
@@ -32,7 +32,7 @@ jobs:
 
       - name: Cache Blender
         id: cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/blender.tar.xz
           key: blender-${{ matrix.version }}-${{ matrix.sha256 }}
