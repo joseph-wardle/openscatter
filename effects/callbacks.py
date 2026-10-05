@@ -50,16 +50,29 @@ def node_deleted_handler(self, context: bpy.types.Context):
     node_tree = get_node_tree(context)
     if node_tree is None:
         return
-    if category in node_tree.nodes:
-        node: bpy.types.GeometryNodeGroup = node_tree.nodes[category]
-        selected = node.node_tree.gscatter.get_selected()
+    if category not in node_tree.nodes:
+        return
+    node: bpy.types.GeometryNodeGroup = node_tree.nodes[category]
+    selected = node.node_tree.gscatter.get_selected()
     if selected and selected.group_node is None:
         index = node.node_tree.gscatter.effects.find(selected.name)
         node.node_tree.gscatter.effects.remove(index)
 
 
+# Name of the camera last set on effects' Active Camera inputs, so that
+# updates that don't change it or any node tree can skip the search.
+_applied_camera = None
+
+
 @persistent
-def active_camera_handler(self, dephgraph):
+def active_camera_handler(scene, depsgraph):
+    global _applied_camera
+    camera = bpy.context.scene.camera
+    camera_name = camera.name if camera else None
+    if camera_name == _applied_camera and not depsgraph.id_type_updated("NODETREE"):
+        return
+    _applied_camera = camera_name
+
     for obj in bpy.data.objects:
         node_tree = get_node_tree(obj)
         if node_tree is None:
@@ -72,15 +85,22 @@ def active_camera_handler(self, dephgraph):
                     if (
                         inp.type == "OBJECT"
                         and inp.name.endswith("Active Camera")
-                        and inp.default_value != bpy.context.scene.camera
+                        and inp.default_value != camera
                     ):
-                        inp.default_value = bpy.context.scene.camera
+                        inp.default_value = camera
+
+
+@persistent
+def reset_active_camera(*args):
+    global _applied_camera
+    _applied_camera = None
 
 
 def register():
     bpy.app.handlers.depsgraph_update_post.append(node_deleted_handler)
     bpy.app.handlers.depsgraph_update_post.append(active_camera_handler)
     bpy.app.handlers.frame_change_post.append(active_camera_handler)
+    bpy.app.handlers.load_post.append(reset_active_camera)
     bpy.app.handlers.load_post.append(check_and_set_effect_category_and_database)
 
 
@@ -88,3 +108,5 @@ def unregister():
     bpy.app.handlers.depsgraph_update_post.remove(node_deleted_handler)
     bpy.app.handlers.depsgraph_update_post.remove(active_camera_handler)
     bpy.app.handlers.frame_change_post.remove(active_camera_handler)
+    bpy.app.handlers.load_post.remove(reset_active_camera)
+    bpy.app.handlers.load_post.remove(check_and_set_effect_category_and_database)

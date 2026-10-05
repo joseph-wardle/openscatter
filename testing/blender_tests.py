@@ -74,8 +74,22 @@ def error_message(e: Exception) -> str:
     return str(e).strip().splitlines()[-1]
 
 
+def handlers(module: str) -> list:
+    """Names of the add-on's functions in bpy.app.handlers."""
+    result = []
+    for name in dir(bpy.app.handlers):
+        functions = getattr(bpy.app.handlers, name)
+        if isinstance(functions, list):
+            result += [
+                f"{name}: {f.__name__}"
+                for f in functions
+                if getattr(f, "__module__", "").startswith(module + ".")
+            ]
+    return result
+
+
 def smoke(module: str) -> dict:
-    """Scatter, then stack every effect on one system."""
+    """Scatter, then stack every effect on one system, then disable the add-on."""
     result = {}
     scatter()
     result["scatter"] = fingerprint()
@@ -89,6 +103,8 @@ def smoke(module: str) -> dict:
             failed[f"{effect.id}@{effect.version_str}"] = error_message(e)
     result["effects_added"] = added
     result["effects_failed"] = failed
+    bpy.ops.preferences.addon_disable(module=module)
+    result["handlers_left"] = handlers(module)
     return result
 
 

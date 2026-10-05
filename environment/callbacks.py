@@ -29,4 +29,4 @@ def register():
 
 
 def unregister():
-    pass
+    bpy.app.handlers.load_post.remove(effect_instance_id_handler)

@@ -214,6 +214,24 @@ def set_active_camera(self, context):
         scene_props.camera_culling.camera = bpy.context.scene.camera
 
 
+def add_active_camera_handlers():
+    for handlers in (
+        bpy.app.handlers.depsgraph_update_post,
+        bpy.app.handlers.frame_change_post,
+    ):
+        if set_active_camera not in handlers:
+            handlers.append(set_active_camera)
+
+
+def remove_active_camera_handlers():
+    for handlers in (
+        bpy.app.handlers.depsgraph_update_post,
+        bpy.app.handlers.frame_change_post,
+    ):
+        if set_active_camera in handlers:
+            handlers.remove(set_active_camera)
+
+
 def _toggle_proxy_effect(obj, display_type, mute):
     node_tree = get_node_tree(obj)
     if node_tree is None:
@@ -284,11 +302,9 @@ class CameraCullingProps(bpy.types.PropertyGroup):
     def _update_use_active_camera(self, context):
         if self.use_active_camera:
             set_active_camera(self, context)
-            bpy.app.handlers.depsgraph_update_post.append(set_active_camera)
-            bpy.app.handlers.frame_change_post.append(set_active_camera)
+            add_active_camera_handlers()
         else:
-            bpy.app.handlers.depsgraph_update_post.remove(set_active_camera)
-            bpy.app.handlers.frame_change_post.remove(set_active_camera)
+            remove_active_camera_handlers()
 
     ID = "CAMERA_CULLING"
     use: bpy.props.BoolProperty(
@@ -480,6 +496,7 @@ def unregister():
     del bpy.types.Scene.gscatter
     del bpy.types.Object.gscatter
     bpy.app.handlers.load_post.remove(set_proxy_method)
+    remove_active_camera_handlers()
 
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

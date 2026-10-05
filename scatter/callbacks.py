@@ -78,3 +78,4 @@ def register():
 def unregister():
     bpy.app.handlers.depsgraph_update_post.remove(object_deleted_handler)
     bpy.app.handlers.depsgraph_update_post.remove(active_object_change_handler)
+    bpy.app.handlers.load_post.remove(check_scatter_system_versions)

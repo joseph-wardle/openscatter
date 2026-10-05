@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Moving and editing objects is no longer slowed down by the number of
+  effects in the file. The add-on searched every effect for an Active Camera
+  input on every scene update; it now does so only when the scene camera or
+  a node tree changes.
+- Disabling the add-on now removes all its handlers, so they no longer cause
+  errors once it's unloaded.
+
 ## 0.13.0
 
 The first OpenScatter release, based on GScatter 0.12.0 by Graswald.

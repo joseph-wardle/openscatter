@@ -723,6 +723,7 @@ def register():
 
 
 def unregister():
+    bpy.app.handlers.load_post.remove(load_library_handler)
     del WindowManagerProps.library
 
     for cls in reversed(classes):

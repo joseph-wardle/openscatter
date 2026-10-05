@@ -5,7 +5,8 @@
     python testing/run_tests.py --blender ~/blender-5.2/blender smoke
 
 Tests:
-  smoke    The extension enables, scatters, and every effect can be added.
+  smoke    The extension enables, scatters, every effect can be added, and
+           disabling it removes all its handlers.
   effects  Each effect version, added alone to a fresh scatter in each of its
            categories, gives the same instance count and transforms as in
            reference/effects.json, with default settings and with influence,
@@ -109,6 +110,10 @@ def check_smoke(result: dict) -> list[str]:
         errors.append(f"adding {effect} failed: {message}")
     if result["effects_added"] == 0:
         errors.append("no effects were added")
+    if result.get("handlers_left"):
+        errors.append(
+            "handlers left after disabling: " + ", ".join(result["handlers_left"])
+        )
     return errors
 
 
