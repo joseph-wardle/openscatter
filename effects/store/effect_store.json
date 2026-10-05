@@ -166662,7 +166662,7 @@
                         "id": "0d2a8eb9922d4515b758a8c343588d67",
                         "name": "Voronoi Texture",
                         "author": "Graswald",
-                        "description": "Recreate procedural terrain patterns with this voronoi texture.",
+                        "description": "Recreate procedural terrain patterns with this voronoi texture. On Blender 5.0 and later the pattern differs from Blender 4.x, as Blender changed its 4D Voronoi node.",
                         "icon": "custom_voronoi",
                         "categories": [
                             "DISTRIBUTION",
