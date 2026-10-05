@@ -3,6 +3,12 @@ import bpy
 from ..utils.getters import get_preferences
 from .props import WindowManagerProps
 
+# GScatter's documentation still applies, as the UI is unchanged. Its tutorial
+# playlist is gone, so search for tutorials instead.
+DOCUMENTATION_URL = "https://www.notion.so/graswald/Help-Support-Documentation-8822cee19a4944beb30bc6f80c6c699a"
+TUTORIALS_URL = "https://www.youtube.com/results?search_query=gscatter+blender+tutorial"
+ISSUES_URL = "https://github.com/joseph-wardle/openscatter/issues"
+
 
 class OpenUrlOperator(bpy.types.Operator):
     """Open a URL in the browser"""
@@ -62,14 +68,13 @@ class ShowTutorialPopupOperator(bpy.types.Operator):
         col.scale_y = 2
         op = col.operator(
             OpenUrlOperator.bl_idname,
-            text="Open Beginners Guide Playlist (original GScatter)",
+            text="Find GScatter Tutorials on YouTube",
             icon="PLAY",
         )
-        OpenUrlOperator.configure(
-            op,
-            "https://www.youtube.com/playlist?list=PLOA3PJ1m8P7sIyw7bY2bYRqaS-sUTd7AZ",
-            "openTutorialPlaylistFromLearnGscatterPopup",
+        op.tooltip = (
+            "Search YouTube for GScatter tutorials, which also apply to OpenScatter"
         )
+        OpenUrlOperator.configure(op, TUTORIALS_URL, "openTutorials")
         col.separator(factor=0.5)
         op = col.operator(
             OpenUrlOperator.bl_idname,
@@ -77,14 +82,13 @@ class ShowTutorialPopupOperator(bpy.types.Operator):
             icon="HELP",
         )
         op.tooltip = "Read the original GScatter documentation by Graswald"
-        url = "https://www.notion.so/graswald/Help-Support-Documentation-8822cee19a4944beb30bc6f80c6c699a"
-        OpenUrlOperator.configure(op, url, "openDocumentationPage")
+        OpenUrlOperator.configure(op, DOCUMENTATION_URL, "openDocumentationPage")
         layout.separator(factor=1)
         col = layout.column()
         col.scale_y = 0.8
-        col.label(text="Dismiss this message permanantly by clicking on OK.")
-        col.label(text="Help videos & documentation are also available in: ")
-        col.label(text="3D View > OpenScatter > Info > Help & Support, Beginners Guide")
+        col.label(text="Dismiss this message permanently by clicking on OK.")
+        col.label(text="Tutorials, documentation and issue reports are also in:")
+        col.label(text="3D View > OpenScatter > Info")
 
     def invoke(self, context, event):
         return bpy.context.window_manager.invoke_props_dialog(self, width=350)

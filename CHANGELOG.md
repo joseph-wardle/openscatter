@@ -8,6 +8,9 @@
   a node tree changes.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
+- The Info panel is shown even when Blender's online access is off, and has a
+  Report an Issue button that opens OpenScatter's GitHub issues. GScatter's
+  tutorial playlist was removed, so Tutorials now searches YouTube instead.
 
 ## 0.13.0
 

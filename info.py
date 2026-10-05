@@ -1,7 +1,6 @@
 import bpy
-from .utils.getters import get_allow_networking
 
-from .common.ops import OpenUrlOperator
+from .common.ops import DOCUMENTATION_URL, ISSUES_URL, TUTORIALS_URL, OpenUrlOperator
 from .common.ui import BasePanel
 
 
@@ -10,10 +9,6 @@ class InfoPanel(BasePanel):
     bl_label = "Info"
     bl_order = 200
 
-    @classmethod
-    def poll(cls, context: bpy.types.Context) -> bool:
-        return get_allow_networking()
-
     def draw_header(self, context: bpy.types.Context):
         self.layout.label(icon="HELP")
 
@@ -21,20 +16,22 @@ class InfoPanel(BasePanel):
         layout = self.layout
 
         op = layout.operator(
-            OpenUrlOperator.bl_idname, text="Help & Support", icon="HELP"
+            OpenUrlOperator.bl_idname, text="Documentation", icon="HELP"
         )
         op.tooltip = "Read the original GScatter documentation by Graswald"
-        url = "https://www.notion.so/graswald/Help-Support-Documentation-8822cee19a4944beb30bc6f80c6c699a"
-        OpenUrlOperator.configure(op, url, "openDocumentationPage")
+        OpenUrlOperator.configure(op, DOCUMENTATION_URL, "openDocumentationPage")
+
+        op = layout.operator(OpenUrlOperator.bl_idname, text="Tutorials", icon="PLAY")
+        op.tooltip = (
+            "Search YouTube for GScatter tutorials, which also apply to OpenScatter"
+        )
+        OpenUrlOperator.configure(op, TUTORIALS_URL, "openTutorials")
 
         op = layout.operator(
-            OpenUrlOperator.bl_idname,
-            text="Beginners Guide",
-            icon="PLAY",
+            OpenUrlOperator.bl_idname, text="Report an Issue", icon="URL"
         )
-        op.tooltip = "Watch the original GScatter tutorial playlist by Graswald"
-        url = "https://youtube.com/playlist?list=PLOA3PJ1m8P7sIyw7bY2bYRqaS-sUTd7AZ"
-        OpenUrlOperator.configure(op, url, "openGraswaldGscatterPlaylist")
+        op.tooltip = "Report a bug or ask for help on OpenScatter's GitHub page"
+        OpenUrlOperator.configure(op, ISSUES_URL, "openIssues")
 
         layout.separator()
         row = layout.row()
