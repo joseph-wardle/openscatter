@@ -1,11 +1,12 @@
+import functools
 import pathlib
+import tomllib
 from os.path import dirname, join
-from typing import TYPE_CHECKING, Any, Tuple, Union
+from typing import TYPE_CHECKING, Any, Union
 from uuid import uuid4
 
 import bpy
 from bpy.types import Context, Depsgraph, GeometryNodeTree, NodesModifier, Object
-import addon_utils
 
 from .. import __package__ as base_package
 
@@ -41,19 +42,14 @@ if TYPE_CHECKING:
 
 
 def get_package() -> str:
-    if bpy.app.version >= (4, 2, 0):
-        return base_package
-    else:
-        return __package__.split(".")[-2]
+    return base_package
 
 
-def get_version() -> Tuple[int, int, int]:
-    version = [
-        [str(i) for i in addon.bl_info.get("version", (0, 0, 0))]
-        for addon in addon_utils.modules()
-        if addon.__name__ == get_package()
-    ][0]
-    return version
+@functools.cache
+def get_version() -> str:
+    """The extension's version, as written in its manifest."""
+    with open(get_addon_dir() / "blender_manifest.toml", "rb") as f:
+        return tomllib.load(f)["version"]
 
 
 def get_addon_dir():

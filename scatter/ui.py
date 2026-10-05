@@ -351,7 +351,7 @@ class ScatterPanel(BasePanel):
 
     def draw_header_preset(self, context: Context):
         layout = self.layout
-        layout.label(text="v" + ".".join(map(str, get_version())))
+        layout.label(text="v" + get_version())
 
     def draw(self, context: bpy.types.Context):
         scene_props = get_scene_props(context)
@@ -481,7 +481,7 @@ class GscatterStartPanel(BasePanel):
 
     def draw_header_preset(self, context: Context):
         layout = self.layout
-        layout.label(text="v" + ".".join(map(str, get_version())))
+        layout.label(text="v" + get_version())
 
     def draw_environment_template_view(self, layout, context):
         wm_props = get_wm_props(context)
