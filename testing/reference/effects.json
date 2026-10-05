@@ -804,10 +804,6 @@
    "instances": 200,
    "name": "Distribute on Faces"
   },
-  "system.distribute_on_vertices@1.1.0 DISTRIBUTION default": {
-   "error": "'bpy_prop_collection[key]: key \"Main Geometry\" not found'",
-   "name": "Distribute on Vertices"
-  },
   "system.distribute_on_vertices@2.1.0 DISTRIBUTION blend ADD": {
    "checksum": 852.373,
    "instances": 109,
@@ -2747,10 +2743,6 @@
   "system.distribute_on_faces@2.1.1": [
    4,
    1
-  ],
-  "system.distribute_on_vertices@1.1.0": [
-   3,
-   2
   ],
   "system.distribute_on_vertices@2.1.0": [
    3,

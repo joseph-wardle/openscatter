@@ -11,6 +11,9 @@
 - The Info panel is shown even when Blender's online access is off, and has a
   Report an Issue button that opens OpenScatter's GitHub issues. GScatter's
   tutorial playlist was removed, so Tutorials now searches YouTube instead.
+- Removed version 1.1.0 of Distribute on Vertices from the effect manager. It
+  was written for an older scatter system and couldn't be added in GScatter
+  0.12 either. Scenes that use it are unaffected, and 2.1.1 replaces it.
 
 ## 0.13.0
 
