@@ -42,8 +42,8 @@ python testing/run_tests.py                          # uses `blender` on PATH
 python testing/run_tests.py --blender /path/to/blender smoke
 ```
 
-This builds the extension and installs it into a throwaway Blender profile,
-so your own setup isn't touched. Then it runs:
+This builds the extension and installs it into a throwaway Blender profile
+and home folder, so your own setup and library aren't touched. Then it runs:
 
 - `smoke`: the extension enables, scatters, and every effect can be added,
   nothing would stop background Blender from exiting, and disabling it
@@ -55,8 +55,11 @@ so your own setup isn't touched. Then it runs:
   original GScatter 0.12.0 on the Blender each effect was made for (3.6 for
   effects saved in Blender 3.x, 4.2 for those saved in 4.x); see
   `testing/run_tests.py` for how to record it again.
+- `custom`: every version of every effect, saved as a custom effect on the
+  running Blender, exported, imported and reloaded from the user effect
+  store, gives the same result as before it was saved.
 
-GitHub Actions runs both on Blender 4.2 and 5.2 for every push. Run them
+GitHub Actions runs all three on Blender 4.2 and 5.2 for every push. Run them
 yourself against any other version you support, especially new releases.
 
 ## License

@@ -1,6 +1,6 @@
 """Tests that run inside Blender. Use run_tests.py rather than running this directly.
 
-    blender -b --python blender_tests.py -- <add-on module> <smoke|effects> <output.json>
+    blender -b --python blender_tests.py -- <add-on module> <smoke|effects|custom> <output.json>
 
 Writes the results as JSON; run_tests.py decides whether they pass.
 """
@@ -157,13 +157,74 @@ def effects(module: str) -> dict:
     return result
 
 
+def custom(module: str, folder: str) -> dict:
+    """Save each effect version as a custom effect, export and import it, store
+    and reload the user effects, and fingerprint the reloaded effect alongside
+    the original."""
+    store = importlib.import_module(module + ".effects.store").effectstore
+    Effect = importlib.import_module(module + ".effects.store.effect_item").Effect
+    schema_version = importlib.import_module(module + ".effects.default").EFFECT_SCHEMA_VERSION
+    EffectNamespace = importlib.import_module(
+        module + ".effects.store.effect_namespace"
+    ).EffectNamespace
+    if "user" not in store.namespace:
+        store._load_user_namespace()
+    user = store.namespace["user"]
+    if not os.path.abspath(user.filepath).startswith(os.path.abspath(folder)):
+        raise RuntimeError(f"not saving to the user's own effect store, {user.filepath}")
+
+    originals = {}
+    saved = []
+    result = {"effects": {}}
+    for effect in user_effects(module):
+        category = effect.categories[0]
+        key = f"{effect.id}@{effect.version_str} {category}"
+        try:
+            scatter()
+            add_effect_version(module, effect, category)
+            originals[key] = {"name": effect.name, **fingerprint()}
+            # As the Create and Update operators do, on this Blender.
+            copy = Effect(
+                "custom." + effect.id, effect.name, effect.author, effect.description,
+                effect.icon, effect.categories, effect.subcategory,
+                effect.effect_version, schema_version, list(bpy.app.version),
+                effect.nodetree, effect.blend_types, effect.default_blend_type,
+            )
+            path = os.path.join(folder, f"{copy.id}@{copy.version_str}.json")
+            copy.export(path)
+            # As the Import operator does.
+            store.add_from_filepath(path)
+            if store.get_by_id_and_version(copy.id, copy.effect_version) is None:
+                raise RuntimeError("importing the exported effect failed")
+            saved.append((key, copy))
+        except Exception as e:
+            result["effects"][key] = {"name": effect.name, "error": error_message(e)}
+
+    user.changes = True
+    user.store()
+    reloaded = EffectNamespace(user.filepath, "user")
+    for key, copy in saved:
+        try:
+            effect = reloaded._item_index.get(f"{copy.id}:{copy.version_str}")
+            if effect is None:
+                raise RuntimeError("the effect was missing after reloading the user store")
+            scatter()
+            add_effect_version(module, effect, key.split(" ")[1])
+            result["effects"][key] = {**originals[key], "saved": fingerprint()}
+        except Exception as e:
+            result["effects"][key] = {"name": copy.name, "error": error_message(e)}
+    return result
+
+
 def main():
     module, test, output = sys.argv[sys.argv.index("--") + 1 :]
     result = {"blender": bpy.app.version_string}
     try:
         bpy.ops.preferences.addon_enable(module=module)
         result["enabled"] = module in bpy.context.preferences.addons
-        if result["enabled"]:
+        if result["enabled"] and test == "custom":
+            result.update(custom(module, os.path.dirname(output)))
+        elif result["enabled"]:
             result.update({"smoke": smoke, "effects": effects}[test](module))
     except Exception:
         result["error"] = traceback.format_exc()

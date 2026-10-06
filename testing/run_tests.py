@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build the extension, install it into a throwaway Blender profile and test it.
+"""Build the extension, install it into a throwaway Blender profile and home
+folder, and test it.
 
     python testing/run_tests.py                      # all tests, with `blender` on PATH
     python testing/run_tests.py --blender ~/blender-5.2/blender smoke
@@ -11,6 +12,9 @@ Tests:
            categories, gives the same instance count and transforms as in
            reference/effects.json, with default settings and with influence,
            invert and each blend type changed in turn.
+  custom   Each effect version, saved as a custom effect on this Blender,
+           exported, imported and reloaded from the user store, gives the
+           same result as the original.
 
 reference/effects.json is from the original GScatter 0.12.0, run on the Blender
 major version each effect was saved with: 3.6 for effects saved in Blender 3.x
@@ -39,7 +43,7 @@ from pathlib import Path
 TESTING = Path(__file__).resolve().parent
 REPO = TESTING.parent
 REFERENCE = TESTING / "reference" / "effects.json"
-TESTS = ("smoke", "effects")
+TESTS = ("smoke", "effects", "custom")
 
 # Effects whose output Blender itself changed, so they can't match the
 # reference: {effect id: (first Blender version (major, minor) affected, reason)}.
@@ -197,11 +201,30 @@ def check_effects(result: dict, version: tuple) -> tuple[list[str], list[str]]:
     return errors, notes
 
 
+def check_custom(result: dict) -> list[str]:
+    errors = []
+    for key, r in result["effects"].items():
+        label = f"{r['name']} ({key})"
+        if r.get("error"):
+            errors.append(f"{label}: error: {r['error']}")
+        elif r["instances"] != r["saved"]["instances"] or (
+            abs(r["checksum"] - r["saved"]["checksum"]) > CHECKSUM_TOLERANCE
+        ):
+            errors.append(
+                f"{label}: {r['instances']} instances, checksum {r['checksum']}"
+                f" before saving, {r['saved']['instances']} instances, checksum"
+                f" {r['saved']['checksum']} after"
+            )
+    if not result["effects"]:
+        errors.append("no effects were saved")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("tests", nargs="*", metavar="test", help="smoke, effects (default: all)")
+    parser.add_argument("tests", nargs="*", metavar="test", help="smoke, effects, custom (default: all)")
     parser.add_argument("--blender", default="blender", help="Blender executable")
     parser.add_argument("--extension-zip", type=Path, help="test this zip instead of building the repo")
     parser.add_argument("--update-reference", action="store_true", help="save the effects results as the reference")
@@ -214,7 +237,15 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="openscatter-tests-") as tmp:
         tmp = Path(tmp)
-        env = dict(os.environ, BLENDER_USER_RESOURCES=str(tmp / "profile"))
+        # The add-on keeps its library in the home folder, so use a fresh one.
+        home = tmp / "home"
+        home.mkdir()
+        env = dict(
+            os.environ,
+            BLENDER_USER_RESOURCES=str(tmp / "profile"),
+            HOME=str(home),
+            USERPROFILE=str(home),
+        )
 
         version = blender_version(args.blender)
         zip_path = args.extension_zip
@@ -258,6 +289,8 @@ def main():
                 errors = ["the extension could not be enabled\n" + log]
             elif test == "smoke":
                 errors = check_smoke(result)
+            elif test == "custom":
+                errors = check_custom(result)
             elif args.update_reference:
                 update_reference(result, version, zip_path)
                 continue
