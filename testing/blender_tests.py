@@ -1,6 +1,6 @@
 """Tests that run inside Blender. Use run_tests.py rather than running this directly.
 
-    blender -b --python blender_tests.py -- <add-on module> <smoke|effects|custom> <output.json>
+    blender -b --python blender_tests.py -- <add-on module> <smoke|effects|custom|shared> <output.json>
 
 Writes the results as JSON; run_tests.py decides whether they pass.
 """
@@ -25,13 +25,16 @@ def clear_scene():
         bpy.data.collections.remove(collection)
 
 
-def scatter():
-    """Scatter a small cube over a 10x10 plane. Returns the scatter system object."""
+def scatter(clear=True):
+    """Scatter a small cube over a 10x10 plane, or over the plane already there
+    if clear is False. Returns the scatter system object."""
     # The add-on picks the system's seed with the random module.
     random.seed(1)
-    clear_scene()
-    bpy.ops.mesh.primitive_plane_add(size=10)
-    plane = bpy.context.active_object
+    if clear:
+        clear_scene()
+        bpy.ops.mesh.primitive_plane_add(size=10)
+    plane = bpy.data.objects["Plane"]
+    systems = {o for o in bpy.data.objects if o.gscatter.is_gscatter_system}
     bpy.ops.mesh.primitive_cube_add(size=0.1, location=(20, 0, 0))
     cube = bpy.context.active_object
     plane.select_set(True)
@@ -41,7 +44,9 @@ def scatter():
         active_object=plane, selected_objects=[plane, cube], object=plane
     ):
         bpy.ops.gscatter.scatter_selected_to_active()
-    system = next(o for o in bpy.data.objects if o.gscatter.is_gscatter_system)
+    system = next(
+        o for o in bpy.data.objects if o.gscatter.is_gscatter_system and o not in systems
+    )
     bpy.context.view_layer.objects.active = system
     return system
 
@@ -57,6 +62,21 @@ def fingerprint() -> dict:
             count += 1
             checksum += sum(abs(v) for row in instance.matrix_world for v in row)
     return {"instances": count, "checksum": round(checksum, 3)}
+
+
+def system_fingerprints() -> dict:
+    """fingerprint() for each scatter system, by name."""
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    depsgraph.update()
+    result = {}
+    for instance in depsgraph.object_instances:
+        if instance.is_instance:
+            r = result.setdefault(instance.parent.original.name, {"instances": 0, "checksum": 0.0})
+            r["instances"] += 1
+            r["checksum"] += sum(abs(v) for row in instance.matrix_world for v in row)
+    for r in result.values():
+        r["checksum"] = round(r["checksum"], 3)
+    return result
 
 
 def add_effect(effect):
@@ -216,14 +236,112 @@ def custom(module: str, folder: str) -> dict:
     return result
 
 
+SHARED_EFFECTS = ("system.musgrave", "system.randomize", "system.randomize_rotation")
+
+
+def shared(module: str, folder: str) -> dict:
+    """Add the same effects to two systems, then delete, duplicate, reload and
+    edit, recording what happens to the node groups the effects share."""
+    effect_item = importlib.import_module(module + ".effects.store.effect_item")
+    store = importlib.import_module(module + ".effects.store").effectstore
+
+    def shared_groups() -> set:
+        return {g.name for g in bpy.data.node_groups if effect_item.is_shared(g)}
+
+    def empty_group_nodes() -> int:
+        return sum(
+            1
+            for g in bpy.data.node_groups
+            for n in g.nodes
+            if isinstance(n, bpy.types.GeometryNodeGroup) and n.node_tree is None
+        )
+
+    def add_effects():
+        for effect_id in SHARED_EFFECTS:
+            add_effect(store.get_newest_by_id(effect_id))
+
+    def select(system):
+        items = bpy.context.scene.gscatter.scatter_surface.gscatter.scatter_items
+        index = next(i for i, item in enumerate(items) if item.obj == system)
+        bpy.context.scene.gscatter.scatter_surface.gscatter.scatter_index = index
+        bpy.context.view_layer.objects.active = system
+
+    result = {}
+    first = scatter()
+    add_effects()
+    groups = shared_groups()
+    result["shared"] = len(groups)
+    second = scatter(clear=False)
+    add_effects()
+    result["second_system_new_shared"] = sorted(shared_groups() - groups)
+    first_name = first.name
+    before = system_fingerprints().get(first_name)
+    result["second_system"] = system_fingerprints().get(second.name)
+
+    select(second)
+    bpy.ops.gscatter.delete_scatter_item()
+    result["delete"] = {
+        "before": before,
+        "after": system_fingerprints().get(first_name),
+        "empty_group_nodes": empty_group_nodes(),
+    }
+
+    select(first)
+    bpy.ops.gscatter.duplicate_scatter_item()
+    copy = next(
+        o for o in bpy.data.objects if o.gscatter.is_gscatter_system and o != first
+    )
+    copy_name = copy.name
+    duplicated = system_fingerprints().get(copy_name)
+    select(first)
+    bpy.ops.gscatter.delete_scatter_item()
+    result["duplicate"] = {
+        "original": before,
+        "copy": duplicated,
+        "after_deleting_original": system_fingerprints().get(copy_name),
+        "empty_group_nodes": empty_group_nodes(),
+    }
+
+    path = os.path.join(folder, "shared.blend")
+    bpy.ops.wm.save_as_mainfile(filepath=path)
+    bpy.ops.wm.open_mainfile(filepath=path)
+    groups = shared_groups()
+    select(bpy.data.objects[copy_name])
+    add_effects()
+    result["reload_new_shared"] = sorted(shared_groups() - groups)
+
+    edited = next(
+        (g for g in bpy.data.node_groups if effect_item.is_shared(g) and g.name.startswith("mixer")),
+        None,
+    )
+    if edited is None:
+        result["edit"] = None
+        return result
+    edited.nodes.new("NodeReroute")
+    users = edited.users
+    groups = shared_groups()
+    add_effects()
+    source = edited[effect_item.SHARED_KEY]["source"]
+    result["edit"] = {
+        "users_before": users,
+        "users_after": edited.users,
+        "rebuilt": any(
+            bpy.data.node_groups[name][effect_item.SHARED_KEY]["source"] == source
+            for name in shared_groups() - groups
+        ),
+    }
+    return result
+
+
 def main():
     module, test, output = sys.argv[sys.argv.index("--") + 1 :]
     result = {"blender": bpy.app.version_string}
     try:
         bpy.ops.preferences.addon_enable(module=module)
         result["enabled"] = module in bpy.context.preferences.addons
-        if result["enabled"] and test == "custom":
-            result.update(custom(module, os.path.dirname(output)))
+        if result["enabled"] and test in ("custom", "shared"):
+            test = {"custom": custom, "shared": shared}[test]
+            result.update(test(module, os.path.dirname(output)))
         elif result["enabled"]:
             result.update({"smoke": smoke, "effects": effects}[test](module))
     except Exception:

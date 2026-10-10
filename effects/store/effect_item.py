@@ -1,10 +1,16 @@
 from ...utils.logger import debug
 from ...common.store import AbstractStoreItem
 from typing import Union, Any
+import hashlib
+import json
 import bpy
 from .legacy import find_socket, upgrade_node, upgrade_node_data
 
 EXCLUDE_PROPS = {"bl_rna"}
+
+# Marks node groups that effects share, with the hash of the data they were
+# built from and of their contents when built.
+SHARED_KEY = "openscatter_shared"
 
 FLOAT_MIN = -1e20
 FLOAT_MAX = 1e20
@@ -26,6 +32,72 @@ def clean(value: Any) -> Union[str, list, Any, None]:
     if hasattr(value, "__add__"):
         return value
     return None
+
+
+def shows_settings(group_data: dict) -> bool:
+    """Whether the effect panel shows settings from this node group."""
+    return any(
+        node.get("props", {}).get("display_in_effect")
+        or ("node_group" in node and shows_settings(node["node_group"]))
+        for node in group_data["nodes"]
+    )
+
+
+def is_shared(group: bpy.types.GeometryNodeTree) -> bool:
+    return SHARED_KEY in group
+
+
+def contents_hash(group: bpy.types.GeometryNodeTree) -> str:
+    """A hash of a node group's sockets, nodes and links, to tell whether it
+    has been changed since it was built."""
+
+    def value(v):
+        if isinstance(v, set):
+            return tuple(sorted(v))
+        return tuple(v) if hasattr(v, "__len__") and not isinstance(v, str) else v
+
+    parts = [
+        (item.item_type, getattr(item, "socket_type", ""), item.name,
+         value(getattr(item, "default_value", None)))
+        for item in group.interface.items_tree
+    ]
+    for node in sorted(group.nodes, key=lambda n: n.name):
+        props = [
+            (p.identifier, value(getattr(node, p.identifier)))
+            for p in node.bl_rna.properties
+            if p.type in {"BOOLEAN", "INT", "FLOAT", "ENUM", "STRING"}
+            and not p.is_readonly
+            and getattr(p, "array_length", 0) == 0
+            and p.identifier not in CONTENTS_IGNORED_PROPS
+        ]
+        inputs = [
+            (s.identifier, value(s.default_value))
+            for s in node.inputs
+            if hasattr(s, "default_value")
+        ]
+        extra = None
+        if getattr(node, "node_tree", None):
+            extra = contents_hash(node.node_tree)
+        elif hasattr(node, "color_ramp"):
+            extra = [(e.position, tuple(e.color)) for e in node.color_ramp.elements]
+        elif hasattr(node, "mapping"):
+            extra = [
+                [(tuple(p.location), p.handle_type) for p in curve.points]
+                for curve in node.mapping.curves
+            ]
+        parts.append((node.bl_idname, node.name, props, inputs, extra))
+    parts.extend(
+        (l.from_node.name, l.from_socket.identifier, l.to_node.name, l.to_socket.identifier)
+        for l in group.links
+    )
+    return hashlib.sha1(repr(parts).encode()).hexdigest()
+
+
+# Node properties that only change how the node is drawn.
+CONTENTS_IGNORED_PROPS = {
+    "name", "label", "select", "hide", "show_options", "show_preview",
+    "show_texture", "use_custom_color", "width", "height", "width_hidden",
+}
 
 
 class Effect(AbstractStoreItem):
@@ -86,7 +158,7 @@ class Effect(AbstractStoreItem):
         node.label = node_data["label"]
 
         if isinstance(node, bpy.types.GeometryNodeGroup):
-            node.node_tree = self._node_group_from_dict(node_data["node_group"])
+            node.node_tree = self._shared_node_group(node_data["node_group"])
             props = node_data.get("props", {})
             for key, value in props.items():
                 if key in [
@@ -141,6 +213,30 @@ class Effect(AbstractStoreItem):
                 node.mapping.curves[0].points[-1].location = point_last[0]
 
         upgrade_node(node, node_data)
+
+    def _shared_node_group(self, data: dict) -> bpy.types.GeometryNodeTree:
+        """Node groups that show no settings in the effect panel are never
+        changed after they're built, so effects share one copy of each rather
+        than each building their own."""
+        if shows_settings(data):
+            return self._node_group_from_dict(data)
+        source = hashlib.sha1(
+            json.dumps(
+                [data, self.blender_version, bpy.app.version[:2]], sort_keys=True
+            ).encode()
+        ).hexdigest()
+        for group in bpy.data.node_groups:
+            shared = group.get(SHARED_KEY)
+            if (
+                shared
+                and shared["source"] == source
+                and group.library is None
+                and shared["contents"] == contents_hash(group)
+            ):
+                return group
+        group = self._node_group_from_dict(data)
+        group[SHARED_KEY] = {"source": source, "contents": contents_hash(group)}
+        return group
 
     def _node_group_from_dict(
         self, data: dict, name: str = None

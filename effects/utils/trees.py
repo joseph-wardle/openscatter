@@ -5,6 +5,7 @@ import bpy
 from ...utils.getters import get_node_tree, get_scene_props
 from .. import default
 from ..store import effectstore
+from ..store.effect_item import is_shared
 from ..store.utils import get_input_from_identifier
 
 
@@ -146,9 +147,12 @@ def disconnect_node(
 def deepcopy_nodetree(
     node_tree: bpy.types.GeometryNodeTree,
 ) -> bpy.types.GeometryNodeTree:
+    """Copy a node tree and the node groups in it, except shared ones."""
     new_tree: bpy.types.GeometryNodeTree = node_tree.copy()
     for node in new_tree.nodes.values():
-        if isinstance(node, bpy.types.GeometryNodeGroup):
+        if isinstance(node, bpy.types.GeometryNodeGroup) and not is_shared(
+            node.node_tree
+        ):
             node.node_tree = deepcopy_nodetree(node.node_tree)
     return new_tree
 

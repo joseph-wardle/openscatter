@@ -15,6 +15,9 @@ Tests:
   custom   Each effect version, saved as a custom effect on this Blender,
            exported, imported and reloaded from the user store, gives the
            same result as the original.
+  shared   Effects share the node groups that show no settings, and deleting
+           or duplicating a system, reloading the file and editing a shared
+           group all keep the scatter working.
 
 reference/effects.json is from the original GScatter 0.12.0, run on the Blender
 major version each effect was saved with: 3.6 for effects saved in Blender 3.x
@@ -43,7 +46,7 @@ from pathlib import Path
 TESTING = Path(__file__).resolve().parent
 REPO = TESTING.parent
 REFERENCE = TESTING / "reference" / "effects.json"
-TESTS = ("smoke", "effects", "custom")
+TESTS = ("smoke", "effects", "custom", "shared")
 
 # Effects whose output Blender itself changed, so they can't match the
 # reference: {effect id: (first Blender version (major, minor) affected, reason)}.
@@ -220,11 +223,51 @@ def check_custom(result: dict) -> list[str]:
     return errors
 
 
+def check_shared(result: dict) -> list[str]:
+    errors = []
+    if result["shared"] == 0:
+        errors.append("no node groups were shared")
+    if not result["delete"]["before"]:
+        errors.append("the first system scattered nothing")
+    if result["second_system_new_shared"]:
+        errors.append(
+            "a second system with the same effects built its own groups: "
+            + ", ".join(result["second_system_new_shared"])
+        )
+    if not result["second_system"]:
+        errors.append("the second system scattered nothing")
+    delete = result["delete"]
+    if delete["after"] != delete["before"]:
+        errors.append(
+            f"deleting the second system changed the first: {delete['before']} before, {delete['after']} after"
+        )
+    duplicate = result["duplicate"]
+    if not (duplicate["original"] == duplicate["copy"] == duplicate["after_deleting_original"]):
+        errors.append(
+            f"duplicating: original {duplicate['original']}, copy {duplicate['copy']},"
+            f" copy after deleting the original {duplicate['after_deleting_original']}"
+        )
+    for label, r in (("deleting", delete), ("duplicating", duplicate)):
+        if r["empty_group_nodes"]:
+            errors.append(f"{label} left {r['empty_group_nodes']} group nodes with no node group")
+    if result["reload_new_shared"]:
+        errors.append(
+            "after reloading, effects built their own groups: "
+            + ", ".join(result["reload_new_shared"])
+        )
+    edit = result["edit"]
+    if edit is None:
+        errors.append("there was no shared mixer group to edit")
+    elif edit["users_after"] != edit["users_before"] or not edit["rebuilt"]:
+        errors.append(f"new effects reused an edited shared group: {edit}")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("tests", nargs="*", metavar="test", help="smoke, effects, custom (default: all)")
+    parser.add_argument("tests", nargs="*", metavar="test", help="smoke, effects, custom, shared (default: all)")
     parser.add_argument("--blender", default="blender", help="Blender executable")
     parser.add_argument("--extension-zip", type=Path, help="test this zip instead of building the repo")
     parser.add_argument("--update-reference", action="store_true", help="save the effects results as the reference")
@@ -291,6 +334,8 @@ def main():
                 errors = check_smoke(result)
             elif test == "custom":
                 errors = check_custom(result)
+            elif test == "shared":
+                errors = check_shared(result)
             elif args.update_reference:
                 update_reference(result, version, zip_path)
                 continue

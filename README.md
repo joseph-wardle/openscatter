@@ -58,8 +58,11 @@ and home folder, so your own setup and library aren't touched. Then it runs:
 - `custom`: every version of every effect, saved as a custom effect on the
   running Blender, exported, imported and reloaded from the user effect
   store, gives the same result as before it was saved.
+- `shared`: effects share the node groups that show no settings, and
+  deleting or duplicating a system, reloading the file and editing a shared
+  group all keep the scatter working.
 
-GitHub Actions runs all three on Blender 4.2 and 5.2 for every push. Run them
+GitHub Actions runs all four on Blender 4.2 and 5.2 for every push. Run them
 yourself against any other version you support, especially new releases.
 
 ## License

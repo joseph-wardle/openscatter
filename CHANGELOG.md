@@ -6,6 +6,12 @@
   effects in the file. The add-on searched every effect for an Active Camera
   input on every scene update; it now does so only when the scene camera or
   a node tree changes.
+- Effects now share the node groups inside them that show no settings,
+  instead of each building its own copy. With 20 systems of 5 effects, the
+  file has half as many node groups and is half the size (34 MB instead of
+  67 MB), and scattering and adding effects are two to three times faster.
+  Editing one of these shared groups by hand changes it for every effect that
+  uses it; effects added afterwards get a fresh copy.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a
