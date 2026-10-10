@@ -44,8 +44,8 @@ Assets downloaded from Graswald's servers remain subject to Graswald's own terms
 - `custom_rotate`, `custom_wave`, `not_selected`, `selected`, `visibility_on`,
   `visibility_off` icons in `icons/` are from Google's Material Design Icons
   (https://fonts.google.com/icons), Apache License 2.0.
-- The `custom_voronoi` icon in `icons/` is "Voronoi Treemap" by loading.io
-  (https://loading.io/).
+- The `custom_voronoi` icon in `icons/` was drawn for OpenScatter and is
+  under the same licence as the rest of OpenScatter.
 - The `search` icon in `icons/` is from Feather Icons by @colebemis
   (https://feathericons.com/), MIT License.
 

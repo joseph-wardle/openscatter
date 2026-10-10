@@ -17,6 +17,8 @@
 - The Info panel is shown even when Blender's online access is off, and has a
   Report an Issue button that opens OpenScatter's GitHub issues. GScatter's
   tutorial playlist was removed, so Tutorials now searches YouTube instead.
+- Voronoi Texture has a new icon drawn for OpenScatter, replacing one from
+  loading.io whose licence terms weren't clear.
 - Removed version 1.1.0 of Distribute on Vertices from the effect manager. It
   was written for an older scatter system and couldn't be added in GScatter
   0.12 either. Scenes that use it are unaffected, and 2.1.1 replaces it.
