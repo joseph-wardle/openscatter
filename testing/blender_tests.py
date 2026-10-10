@@ -123,8 +123,33 @@ def smoke(module: str) -> dict:
             failed[f"{effect.id}@{effect.version_str}"] = error_message(e)
     result["effects_added"] = added
     result["effects_failed"] = failed
+    result["icons"] = icons(module)
     bpy.ops.preferences.addon_disable(module=module)
     result["handlers_left"] = handlers(module)
+    return result
+
+
+def icons(module: str) -> dict:
+    """Load every bundled icon, and an asset preview from a path with no file."""
+    icons = importlib.import_module(module + ".icons")
+    previews = importlib.import_module(module + ".asset_manager.previews")
+    result = {}
+    for name in sorted(icons.get_all()):
+        try:
+            icons.get(name)
+            preview = icons.collection.get(icons.get_icon_path(name))
+            result[name] = {
+                "icon_size": list(preview.icon_size),
+                "image_size": list(preview.image_size),
+                "visible": any(preview.icon_pixels[:]),
+            }
+        except Exception as e:
+            result[name] = {"error": error_message(e)}
+    try:
+        previews.get("")
+        result[""] = {}
+    except Exception as e:
+        result[""] = {"error": error_message(e)}
     return result
 
 

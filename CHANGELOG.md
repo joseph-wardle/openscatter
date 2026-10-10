@@ -12,6 +12,9 @@
   67 MB), and scattering and adding effects are two to three times faster.
   Editing one of these shared groups by hand changes it for every effect that
   uses it; effects added afterwards get a fresh copy.
+- Icons and asset previews are loaded by OpenScatter itself instead of the
+  bundled t3dn-bip package, which added the user's Python packages folder to
+  Blender's import path. Asset previews load about five times faster.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

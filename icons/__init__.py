@@ -6,12 +6,10 @@ import bpy
 
 from ..utils import startup
 from ..utils.getters import get_preferences
-from t3dn_bip import previews
-
-previews.settings.WARNINGS = False
+from ..utils.previews import Previews
 
 folder = Path(__file__).parent
-collection: previews.ImagePreviewCollection = None
+collection: Previews = None
 all_icons = {}
 
 
@@ -29,7 +27,7 @@ def get(name: str) -> int:
     icon = all_icons.get(name)
     if icon is None:
         icon = all_icons.get("not_selected")
-    return collection.load_safe(icon, icon, "IMAGE").icon_id
+    return collection.get(icon).icon_id
 
 
 def get_icon_path(name: str) -> int:
@@ -60,11 +58,10 @@ def load_user_icons():
 def register():
     global collection
     global all_icons
-    collection = previews.new(max_size=(32, 32), lazy_load=False)
+    collection = Previews(lazy=False)
     load_icons_from_folder(folder.as_posix())
     startup.add_callback(load_user_icons)
 
 
 def unregister():
-    previews.remove(collection)
-    # bpy.utils.previews.remove(collection._collection)
+    collection.close()

@@ -117,6 +117,17 @@ def check_smoke(result: dict) -> list[str]:
         errors.append(f"adding {effect} failed: {message}")
     if result["effects_added"] == 0:
         errors.append("no effects were added")
+    if not result["icons"]:
+        errors.append("no icons were loaded")
+    for name, icon in result["icons"].items():
+        if "error" in icon:
+            errors.append(f"loading icon {name!r} failed: {icon['error']}")
+        elif name and (
+            icon["icon_size"] != [32, 32]
+            or 0 in icon["image_size"]
+            or not icon["visible"]
+        ):
+            errors.append(f"icon {name} didn't load: {icon}")
     if result.get("handlers_left"):
         errors.append(
             "handlers left after disabling: " + ", ".join(result["handlers_left"])
