@@ -3,6 +3,11 @@ from copy import copy
 from typing import Union
 
 from ..utils import startup
+from ..utils.getters import get_preferences
+
+# Namespaces loaded from the extension's own folder, which can be read-only
+# and is replaced on every update.
+BUNDLED = ("system", "internal")
 
 
 class AbstractStoreItem:
@@ -130,6 +135,18 @@ class AbstractNamespace:
         """
         del self._item_index[item_id]
         self.changes = True
+
+    def can_store(self) -> bool:
+        """Whether store() may write the file. Bundled namespaces are only
+        saved in developer mode, for editing the effects OpenScatter ships."""
+        if not self.changes:
+            return False
+        if self.namespace not in BUNDLED:
+            return True
+        try:
+            return get_preferences().enable_developer_mode
+        except KeyError:  # the extension is being disabled
+            return False
 
     def load(self, filepath: str):
         """Load the namespace

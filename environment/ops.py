@@ -12,6 +12,7 @@ from ..asset_manager.utils import create_asset_browser_entry, load_library
 from ..slow_task_manager.scopped_slow_task import StartSlowTask
 from ..utils import enums
 from ..utils.getters import (
+    get_library_dir,
     get_materials_in_system,
     get_preferences,
     get_scatter_props,
@@ -67,8 +68,7 @@ class CreateEnvironmentOperator(Operator):
 
         # add it to users library
         prefs = get_preferences(context)
-        user_lib = prefs.t3dn_library
-        environments_dir = Path(user_lib, "Environments")
+        environments_dir = get_library_dir(context).joinpath("Environments")
         environment_path = environments_dir.joinpath(environment_creator.name)
 
         # Get systems

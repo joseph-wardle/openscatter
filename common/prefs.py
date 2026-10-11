@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy.types import AddonPreferences, Context, UILayout
@@ -8,7 +6,7 @@ from .. import icons
 from ..asset_manager.callbacks import create_library
 from ..scatter.store import scattersystempresetstore
 from ..utils import enums
-from ..utils.getters import get_package, get_preferences
+from ..utils.getters import get_library_dir, get_package, get_preferences
 from ..utils.logger import update_log_level
 from .props import ProxySettingsProps
 
@@ -43,7 +41,9 @@ class GScatterPreferences(AddonPreferences):
     t3dn_library: StringProperty(
         name="Library Directory",
         subtype="DIR_PATH",
-        default=str(Path.home().joinpath("Documents", "GScatter")),
+        description="Where downloaded assets, environments and your own effects and "
+        "presets are kept. If empty, GScatter's folder in Documents is used if there "
+        "is one, or else a folder in Blender's extension data",
         update=create_library,
     )
 
@@ -165,6 +165,8 @@ class GScatterPreferences(AddonPreferences):
             icon="ASSET_MANAGER",
         )
         self.draw_property(col, self, "t3dn_library", "Library Directory")
+        if not self.t3dn_library:
+            col.label(text=f"Using {get_library_dir()}")
         self.draw_property(col, self, "asset_import_mode", "Asset Import Mode")
         col.separator()
 

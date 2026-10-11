@@ -2,10 +2,8 @@ import glob
 import os
 from pathlib import Path
 
-import bpy
-
 from ..utils import startup
-from ..utils.getters import get_preferences
+from ..utils.getters import get_library_dir
 from ..utils.previews import Previews
 
 folder = Path(__file__).parent
@@ -48,8 +46,7 @@ def get_name_from_custom(icon: str) -> str:
 
 
 def load_user_icons():
-    prefs = get_preferences(bpy.context)
-    store_path = Path(prefs.t3dn_library, "icons")
+    store_path = get_library_dir().joinpath("icons")
     if store_path.exists():
         load_icons_from_folder(store_path.as_posix())
 

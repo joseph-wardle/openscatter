@@ -1,10 +1,9 @@
 from pathlib import Path
 from copy import copy
-import bpy
 from .effect_preset import EffectPreset
 from .effect_preset_namespace import EffectPresetNamespace
 from ...common.store import AbstractStore
-from ...utils.getters import get_preferences
+from ...utils.getters import get_library_dir
 
 
 class EffectPresetStore(AbstractStore):
@@ -64,6 +63,5 @@ class EffectPresetStore(AbstractStore):
             self._item_index[preset.id] = preset
 
     def _load_user_namespace(self):
-        prefs = get_preferences(bpy.context)
-        store_path = Path(prefs.t3dn_library, "effect_preset_store.json").as_posix()
+        store_path = get_library_dir().joinpath("effect_preset_store.json").as_posix()
         self.load(store_path, "user")

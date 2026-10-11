@@ -19,6 +19,11 @@ Tests:
   shared   Effects share the node groups that show no settings, and deleting
            or duplicating a system, reloading the file and editing a shared
            group all keep the scatter working.
+  files    The library is in the extension's user folder, or GScatter's if
+           there is one, unless another is chosen; nothing is made in
+           Documents; the popups don't save the preferences; the extension's
+           own folder isn't changed; and disabling it removes the asset
+           library it added.
   free_assets
            The free assets list and a download, from a fake local server,
            work, and nothing is requested with online access off; a broken
@@ -55,7 +60,7 @@ from pathlib import Path
 TESTING = Path(__file__).resolve().parent
 REPO = TESTING.parent
 REFERENCE = TESTING / "reference" / "effects.json"
-TESTS = ("smoke", "effects", "custom", "shared", "free_assets", "undo")
+TESTS = ("smoke", "effects", "custom", "shared", "files", "free_assets", "undo")
 INTERFACE_TESTS = ("undo",)
 
 # Effects whose output Blender itself changed, so they can't match the
@@ -311,6 +316,35 @@ def check_shared(result: dict) -> list[str]:
     return errors
 
 
+def check_files(result: dict) -> list[str]:
+    checks = {
+        "library": "the library isn't in the extension's user folder by default",
+        "library_used": "the library folder wasn't made in the extension's user folder",
+        "gscatter_library": "GScatter's library in Documents isn't used when it exists",
+        "chosen_library": "the chosen library folder isn't used",
+        "cleared_library": "clearing the library folder doesn't go back to the default",
+        "preferences_dirty": "the popups don't mark the preferences as changed",
+        "developer_can_store": "developer mode can't save the bundled stores",
+        "asset_library_added": "enabling experimental features doesn't add the asset library",
+    }
+    errors = [message for key, message in checks.items() if not result[key]]
+    if result["online_access"]:
+        errors.append("online access is on in the test profile")
+    if result["documents_used"]:
+        errors.append("a folder was made in Documents")
+    if result["userpref_saved"]:
+        errors.append("the popups saved the preferences")
+    if not result["bundled_count"]:
+        errors.append("no bundled stores were found")
+    if result["asset_library_left"]:
+        errors.append("disabling didn't remove the asset library")
+    if result["package_changed"]:
+        errors.append(
+            "the extension's folder was changed: " + ", ".join(result["package_changed"])
+        )
+    return errors
+
+
 def check_free_assets(result: dict) -> list[str]:
     errors = []
     listed = [["test_plant", True]]
@@ -462,6 +496,8 @@ def main():
                 errors = check_custom(result)
             elif test == "shared":
                 errors = check_shared(result)
+            elif test == "files":
+                errors = check_files(result)
             elif test == "free_assets":
                 errors = check_free_assets(result)
             elif test == "undo":

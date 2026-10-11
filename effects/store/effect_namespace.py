@@ -97,7 +97,7 @@ class EffectNamespace(AbstractNamespace):
                 debug("Failed to verify store")
 
     def store(self):
-        if self.changes:
+        if self.can_store():
             authors_dict = {}
             for effect in self._item_index.values():
                 if not authors_dict.get(effect.author, None):

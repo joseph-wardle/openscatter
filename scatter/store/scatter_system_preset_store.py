@@ -1,9 +1,8 @@
 from .scatter_system_preset_namespace import ScatterSystemPresetNamespace
 from .scatter_system_preset_item import ScatterSystemPreset
 from ...common.store import AbstractStore
-from ...utils.getters import get_preferences
+from ...utils.getters import get_library_dir
 from pathlib import Path
-import bpy
 
 
 class ScatterSystemPresetStore(AbstractStore):
@@ -43,8 +42,7 @@ class ScatterSystemPresetStore(AbstractStore):
             self._item_index[preset.id] = preset
 
     def _load_user_namespace(self):
-        prefs = get_preferences(bpy.context)
-        store_path = Path(prefs.t3dn_library, "system_preset_store.json").as_posix()
+        store_path = get_library_dir().joinpath("system_preset_store.json").as_posix()
         self.load(store_path, "user")
 
     def get_by_id(self, item_id: str) -> ScatterSystemPreset:

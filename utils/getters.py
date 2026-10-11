@@ -509,24 +509,35 @@ def get_params(node, gscatter_assets) -> dict:
     return params
 
 
+# GScatter's library folder, used if no other is chosen so its assets keep working.
+GSCATTER_LIBRARY = pathlib.Path.home().joinpath("Documents", "GScatter")
+
+
+def get_library_dir(context: bpy.types.Context = None) -> pathlib.Path:
+    """The library folder chosen in the preferences, or else the default one."""
+    chosen = get_preferences(context).t3dn_library
+    if chosen:
+        return pathlib.Path(chosen)
+    if GSCATTER_LIBRARY.is_dir():
+        return GSCATTER_LIBRARY
+    return pathlib.Path(bpy.utils.extension_path_user(get_package(), path="library"))
+
+
 def get_user_library(context: bpy.types.Context):
-    prefs = get_preferences(context)
-    library = pathlib.Path(prefs.t3dn_library)
+    library = get_library_dir(context)
     library.mkdir(exist_ok=True, parents=True)
     return library
 
 
 def get_user_assets_dir(context: bpy.types.Context):
-    prefs = get_preferences(context)
-    library = pathlib.Path(prefs.t3dn_library)
+    library = get_library_dir(context)
     assets_dir = library.joinpath("Assets")
     assets_dir.mkdir(exist_ok=True, parents=True)
     return assets_dir
 
 
 def get_asset_browser_dir(context: bpy.types.Context = None):
-    prefs = get_preferences(context)
-    library = pathlib.Path(prefs.t3dn_library)
+    library = get_library_dir(context)
     asset_browser_dir = library.joinpath("AssetBrowser")
     asset_browser_dir.mkdir(exist_ok=True, parents=True)
     return asset_browser_dir

@@ -13,7 +13,7 @@ import bpy
 
 from ..utils.logger import debug
 
-from ..utils.getters import get_asset_browser_dir, get_preferences
+from ..utils.getters import get_asset_browser_dir, get_library_dir
 from . import default
 from .schema import verify_asset, verify_environment
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def user_library() -> Path:
-    library_path = Path(get_preferences().t3dn_library).resolve()
+    library_path = get_library_dir().resolve()
     library_path.mkdir(parents=True, exist_ok=True)
     return library_path
 

@@ -35,6 +35,17 @@
 - Dropdowns whose options depend on the scene, like presets, blend types,
   effects and systems, keep their option names in memory as Blender requires,
   so the names can't turn into garbage or crash Blender.
+- The library is kept in Blender's extension data folder instead of
+  `Documents/GScatter`, which was made for everyone who enabled the add-on.
+  If `Documents/GScatter` already exists, it's still used, so assets from
+  GScatter or OpenScatter 0.13.0 keep working. The preferences show which
+  folder is used.
+- Turning off the tutorial popup or compatibility warning no longer saves all
+  of Blender's preferences; Blender saves the choice with the rest of them.
+- The effects and presets bundled with OpenScatter are never saved back into
+  the extension's folder, except in developer mode.
+- Disabling the add-on removes the Graswald asset library it added to
+  Blender's preferences with experimental features on.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

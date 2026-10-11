@@ -43,7 +43,7 @@ class EffectPresetNamespace(AbstractNamespace):
                     self._item_index[preset.id] = preset
 
     def store(self):
-        if self.changes:
+        if self.can_store():
             data = {
                 "schema_version": default.EFFECT_PRESET_NAMESPACE_SCHEMA,
                 "presets": {},

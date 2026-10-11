@@ -6,9 +6,11 @@ Writes the results as JSON; run_tests.py decides whether they pass.
 """
 
 import gc
+import hashlib
 import importlib
 import json
 import os
+import pathlib
 import random
 import sys
 import threading
@@ -572,6 +574,86 @@ def free_assets(module: str) -> dict:
     return result
 
 
+def folder_hashes(folder: pathlib.Path) -> dict:
+    return {
+        str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in sorted(folder.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts
+    }
+
+
+def files(module: str) -> dict:
+    """Where the extension keeps its files, that it doesn't save the user's
+    preferences or change its own folder, and that disabling it removes the
+    asset library it added."""
+    result = {}
+    prefs = bpy.context.preferences.addons[module].preferences
+    home = pathlib.Path.home()
+    package = pathlib.Path(importlib.import_module(module).__file__).parent
+    before = folder_hashes(package)
+    result["online_access"] = bpy.app.online_access
+
+    getters = importlib.import_module(module + ".utils.getters")
+    default = bpy.utils.extension_path_user(module, path="library")
+    result["library"] = str(getters.get_library_dir()) == default
+    scatter()
+    add_effect(user_effects(module)[0])
+    result["documents_used"] = (home / "Documents").exists()
+    result["library_used"] = pathlib.Path(default).is_dir()
+
+    # GScatter's library is used if there is one, unless another is chosen.
+    gscatter = home / "Documents" / "GScatter"
+    gscatter.mkdir(parents=True, exist_ok=True)
+    result["gscatter_library"] = getters.get_library_dir() == gscatter
+    chosen = home / "Chosen"
+    prefs.t3dn_library = str(chosen)
+    result["chosen_library"] = getters.get_library_dir() == chosen
+    prefs.t3dn_library = ""
+    result["cleared_library"] = getters.get_library_dir() == gscatter
+
+    # The popups' "don't show again" doesn't save every preference.
+    userpref = pathlib.Path(bpy.utils.user_resource("CONFIG"), "userpref.blend")
+    saved = userpref.stat().st_mtime_ns if userpref.exists() else None
+    bpy.context.preferences.is_dirty = False
+    bpy.ops.gscatter.show_tutorial_popup("EXEC_DEFAULT")
+    bpy.ops.gscatter.close_compatibility_warning("EXEC_DEFAULT")
+    result["userpref_saved"] = (
+        userpref.stat().st_mtime_ns if userpref.exists() else None
+    ) != saved
+    result["preferences_dirty"] = bpy.context.preferences.is_dirty
+
+    # Changes to the stores bundled with the extension are only saved in
+    # developer mode; at disable, they'd otherwise be written to its folder.
+    stores = [
+        importlib.import_module(module + ".effects.store").effectstore,
+        importlib.import_module(module + ".effects.store").effectpresetstore,
+        importlib.import_module(module + ".scatter.store").scattersystempresetstore,
+    ]
+    bundled = [
+        namespace
+        for store in stores
+        for name, namespace in store.namespace.items()
+        if name in ("system", "internal")
+    ]
+    for namespace in bundled:
+        namespace.changes = True
+    prefs.enable_developer_mode = True
+    result["developer_can_store"] = all(n.can_store() for n in bundled)
+    prefs.enable_developer_mode = False
+    result["bundled_count"] = len(bundled)
+
+    libraries = bpy.context.preferences.filepaths.asset_libraries
+    prefs.enable_experimental_features = True
+    result["asset_library_added"] = "Graswald" in libraries
+    bpy.ops.preferences.addon_disable(module=module)
+    result["asset_library_left"] = "Graswald" in libraries
+    after = folder_hashes(package)
+    result["package_changed"] = sorted(
+        name for name in set(before) | set(after) if before.get(name) != after.get(name)
+    )
+    return result
+
+
 def scene_state() -> dict:
     """What the operators in undo() can change: objects, collections, node
     trees with their effects, and a few settings."""
@@ -794,7 +876,13 @@ def main():
             test = {"custom": custom, "shared": shared}[test]
             result.update(test(module, os.path.dirname(output)))
         elif result["enabled"]:
-            tests = {"smoke": smoke, "effects": effects, "free_assets": free_assets, "undo": undo}
+            tests = {
+                "smoke": smoke,
+                "effects": effects,
+                "files": files,
+                "free_assets": free_assets,
+                "undo": undo,
+            }
             result.update(tests[test](module))
     except Exception:
         result["error"] = traceback.format_exc()

@@ -46,7 +46,7 @@ class ScatterSystemPresetNamespace(AbstractNamespace):
                 info("Verification failed: Scatter System Preset")
 
     def store(self):
-        if self.changes:
+        if self.can_store():
             data = {
                 "schema_version": default.SCATTER_SYSTEM_PRESET_NAMESPACE_SCHEMA,
                 "presets": {},

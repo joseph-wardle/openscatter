@@ -7,7 +7,7 @@ from ...utils.logger import info
 from .effect_item import Effect
 from .effect_namespace import EffectNamespace
 from ...common.store import AbstractStore
-from ...utils.getters import get_preferences
+from ...utils.getters import get_library_dir
 
 
 class EffectStore(AbstractStore):
@@ -144,6 +144,5 @@ class EffectStore(AbstractStore):
             self._item_index[f"{effect.id}:{effect.version_str}"] = effect
 
     def _load_user_namespace(self):
-        prefs = get_preferences(bpy.context)
-        store_path = Path(prefs.t3dn_library, "effect_store.json").as_posix()
+        store_path = get_library_dir().joinpath("effect_store.json").as_posix()
         self.load(store_path, "user")

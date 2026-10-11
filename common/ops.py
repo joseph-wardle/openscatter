@@ -54,7 +54,8 @@ class CloseCompatibilityWarningOperator(bpy.types.Operator):
         prefs = get_preferences()
         if wm_props.ignore_compatibility_warning:
             prefs.ignore_compatibility_warning = True
-        bpy.ops.wm.save_userpref()
+        # Saved with the user's other preferences, when they choose to.
+        context.preferences.is_dirty = True
         return {"FINISHED"}
 
 
@@ -97,7 +98,8 @@ class ShowTutorialPopupOperator(bpy.types.Operator):
     def execute(self, context):
         prefs = get_preferences()
         prefs.show_tutorial_popup = False
-        bpy.ops.wm.save_userpref()
+        # Saved with the user's other preferences, when they choose to.
+        context.preferences.is_dirty = True
         return {"FINISHED"}
 
 

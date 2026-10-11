@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import bpy
 from bpy.app.handlers import persistent
 
@@ -7,7 +9,7 @@ from ..utils.getters import get_preferences
 from bpy.types import UserAssetLibrary
 from . import default
 from .asset_browser import refresh_library
-from ..utils.getters import get_asset_browser_dir, get_user_library
+from ..utils.getters import get_asset_browser_dir, get_library_dir, get_user_library
 from .utils import load_library
 
 
@@ -105,7 +107,18 @@ def register():
     bpy.app.handlers.load_post.append(create_library)
 
 
+def remove_asset_library():
+    """Remove the asset library entry create_library added to the preferences."""
+    libraries = bpy.context.preferences.filepaths.asset_libraries
+    browser_library = get_library_dir().joinpath("AssetBrowser")
+    for index, library in enumerate(libraries):
+        if library.name == "Graswald" and Path(library.path) == browser_library:
+            bpy.ops.preferences.asset_library_remove(index=index)
+            return
+
+
 def unregister():
+    remove_asset_library()
     bpy.app.handlers.load_post.remove(check_gscatter_asset_browser_entry)
     bpy.app.handlers.load_post.remove(clear_graswald_duplicates)
     bpy.app.handlers.load_post.remove(create_library)

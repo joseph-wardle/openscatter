@@ -24,6 +24,9 @@ by Graswald and GScatter tutorials on YouTube apply. What's different:
 - Effects share the node groups that show no settings, so editing one of those
   by hand in the node editor changes it for every effect that uses it.
 - Voronoi Texture gives a different pattern on Blender 5.0 and later.
+- Downloaded assets, environments and your own effects and presets are kept
+  in Blender's extension data folder, or in GScatter's `Documents/GScatter`
+  if you have it, unless you choose a folder in the preferences.
 
 Report bugs and ask questions on the
 [issue tracker](https://github.com/joseph-wardle/openscatter/issues).
@@ -85,6 +88,10 @@ and home folder, so your own setup and library aren't touched. Then it runs:
 - `shared`: effects share the node groups that show no settings, and
   deleting or duplicating a system, reloading the file and editing a shared
   group all keep the scatter working.
+- `files`: the library is kept in the extension's user folder, or GScatter's
+  if there is one, unless another is chosen; nothing is made in Documents;
+  the popups don't save your preferences; the extension's own folder isn't
+  changed; and disabling it removes the asset library it added.
 - `free_assets`: the free asset list and a download, from a fake local
   server, work; nothing is requested with online access off; and a broken or
   slow server or a cancelled download leaves things as they were.
