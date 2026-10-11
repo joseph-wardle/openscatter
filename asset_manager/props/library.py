@@ -1,4 +1,3 @@
-import json
 import math
 from typing import Union
 
@@ -40,7 +39,7 @@ from ..utils import get_asset_type_from_asset_browser
 from .asset import AssetWidget
 from .base import BaseWidget
 from .environment import EnvironmentWidget
-from .free_assets import FreeAssetWidget, get_free_assets_list
+from .free_assets import FreeAssetWidget, fetch_free_assets, read_free_assets_list
 from .library_configurator import LibraryConfiguratorWidget
 from .product import ProductWidget
 from .tag import TagWidget
@@ -315,51 +314,27 @@ class LibraryWidget(BaseWidget):
 
         if get_free_asset and get_allow_networking():
             self.free_assets.clear()
-            utils.clear_free_assets_entries()
             self.loading_free_assets = True
 
-            def get_assets(data, create_entry):
-                if data is None:
-                    return
+            def on_done(data):
+                # Looked up again, as a file may have been opened meanwhile.
+                library = bpy.context.window_manager.gscatter.library
+                library.loading_free_assets = False
+                library.load_free_assets(data)
 
-                self.free_assets_count = len(data.get("assets", []))
-                for asset_data in data.get("assets", []):
-                    try:
-                        free_asset = self.free_assets.add()
-                        free_asset.load(asset_data, create_entry)
-
-                    except Exception as e:
-                        error(e, "Couldn't load", debug=True)
-
-            def on_done():
-                self.loading_free_assets = False
-                bpy.context.view_layer.update()
-
-                def refresh() -> None:
-                    bpy.ops.wm.redraw_timer(type="DRAW_WIN_SWAP", iterations=1)
-
-                bpy.app.timers.register(refresh)
-                # try:
-                #     os.system("cls")
-                # except:
-                #     ...
-
-            get_free_assets_list(get_assets, on_done)
+            fetch_free_assets(on_done)
         else:
-            self.free_assets.clear()
-            user_library = get_asset_browser_dir()
-            asset_list_path = user_library.joinpath("free_assets.json")
-            free_assets_list = {}
-            if asset_list_path.exists():
-                f = open(asset_list_path, "r")
-                free_assets_list = json.load(f)
-                f.close()
-            for asset_data in free_assets_list.get("assets", []):
-                try:
-                    free_asset = self.free_assets.add()
-                    free_asset.load(asset_data, False)
-                except Exception:
-                    ...
+            self.load_free_assets(read_free_assets_list())
+
+    def load_free_assets(self, data: dict):
+        self.free_assets.clear()
+        self.free_assets_count = len(data.get("assets", []))
+        for asset_data in data.get("assets", []):
+            try:
+                free_asset = self.free_assets.add()
+                free_asset.load(asset_data)
+            except Exception as e:
+                error(e, "Couldn't load free asset")
 
     def draw(self, layout: UILayout, split_factor: float):
         selected = self.selected_assets()

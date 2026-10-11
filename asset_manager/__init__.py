@@ -1,3 +1,4 @@
+from ..utils import background
 from . import callbacks, ops, previews, props, ui
 
 modules = (
@@ -15,5 +16,6 @@ def register():
 
 
 def unregister():
+    background.unregister()
     for module in reversed(modules):
         module.unregister()

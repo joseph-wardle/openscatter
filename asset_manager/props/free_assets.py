@@ -1,9 +1,8 @@
 import json
 import os
-import shutil
 import tempfile
 import threading
-from typing import Union
+from pathlib import Path
 from zipfile import ZipFile
 
 import bpy
@@ -17,20 +16,24 @@ from bpy.props import (
 )
 from bpy.types import OperatorProperties, UILayout
 
-from ...utils.logger import error, info, success
-
-from ...utils import wrap_text
-from ...utils.getters import get_asset_browser_dir, get_preferences, get_user_library
+from ...utils import background, wrap_text
+from ...utils.getters import (
+    get_allow_networking,
+    get_asset_browser_dir,
+    get_preferences,
+    get_user_library,
+)
+from ...utils.logger import error, success
 from .. import previews, utils
 from ..ops.misc import DummyOperator, SelectItemOperator
 from ..ops.popup import OpenPreviewPopup
 from .base import BaseWidget
 
-tmp_dir = tempfile.gettempdir()
-
 FREE_ASSETS_JSON_LIST_URL = "https://asset-downloads.gscatter.com/file-downloads/gscatter/free-assets/asset-list"
 
 ASSET = {"3D_PLANT": "Asset", "ENVIRONMENT": "Environment"}
+
+TIMEOUT = (10, 60)  # seconds to connect, and to wait for each read
 
 
 class FreeAssetWidget(BaseWidget):
@@ -54,38 +57,24 @@ class FreeAssetWidget(BaseWidget):
     installing: BoolProperty()
     cancel_download: BoolProperty()
 
-    def update_cancel(self, context):
-        if self.cancel_download:
-            self.downloading = False
-            self.progress = 0
-
-    def load(self, data: dict, create_entry=True):
-        prefs = get_preferences()
+    def load(self, data: dict):
         self.name = data.get("name", "")
         self.url = data.get("url", "")
         self.asset_id = data.get("asset_id", "")
         self.description = data.get("description", "")
         self.asset_type = data.get("asset_type", "3D_PLANT")
 
-        library_path = get_user_library(bpy.context)
-        user_icons_folder = library_path.joinpath("icons")
-        user_icons_folder.mkdir(exist_ok=True)
-        icon = user_icons_folder.joinpath(self.asset_id + ".bip")
-        if icon.exists():
-            self.icon = icon.as_posix()
-            image_path = icon.as_posix()
-        else:
-            image_path = download_image(data.get("icon", ""), self.asset_id)
-            self.icon = image_path.as_posix()
+        # Icons are downloaded with the list, so they're missing if that failed.
+        icon = icon_path(icons_dir(), self.asset_id)
+        self.icon = icon.as_posix() if icon.exists() else ""
 
-        if create_entry and prefs.enable_experimental_features:
-            return True
+    def icon_id(self) -> int:
+        return previews.get(self.icon).icon_id if self.icon else 0
 
     def draw_gallery(self, layout: UILayout):
         box = layout.box()
-        preview = previews.get(self.icon)
         box.template_icon(
-            icon_value=preview.icon_id, scale=utils.icon_scale_from_res(173)
+            icon_value=self.icon_id(), scale=utils.icon_scale_from_res(173)
         )
         row = layout.row(align=True)
         row.scale_y = 1.6
@@ -97,7 +86,6 @@ class FreeAssetWidget(BaseWidget):
             icon="CHECKMARK" if library.get_asset(self.asset_id) else "NONE",
         )
         op.target, op.deselect = repr(self), False
-        # self.previews.draw_gallery(box)
 
     def draw_compact(self, layout: UILayout):
         library = self.parent
@@ -128,10 +116,8 @@ class FreeAssetWidget(BaseWidget):
         main_col = layout.column(align=True)
 
         box = main_col.box()
-        preview = previews.get(self.icon)
-
         box.template_icon(
-            icon_value=preview.icon_id, scale=utils.icon_scale_from_res(250)
+            icon_value=self.icon_id(), scale=utils.icon_scale_from_res(250)
         )
 
         row = main_col.box().row()
@@ -140,7 +126,7 @@ class FreeAssetWidget(BaseWidget):
         )
         row.operator(
             OpenPreviewPopup.bl_idname, text="", icon="SEQ_PREVIEW"
-        ).icon_id = repr(preview.icon_id)
+        ).icon_id = repr(self.icon_id())
 
         box = main_col.box()
         text_col = box.column(align=True)
@@ -182,7 +168,7 @@ class FreeAssetWidget(BaseWidget):
                 op: OperatorProperties = col.operator(
                     DownloadFreeAssetOperator.bl_idname, text="Download"
                 )
-                op.target = repr(self)
+                op.asset_id = self.asset_id
         else:
             row = col.row()
             row.enabled = False
@@ -211,203 +197,220 @@ class FreeAssetWidget(BaseWidget):
 class DownloadFreeAssetOperator(bpy.types.Operator):
     bl_idname = "gscatter.download_free_asset"
     bl_label = "Download"
-    bl_description = "Download Asset"
+    bl_description = "Download this free asset from Graswald and add it to your library"
 
-    target: StringProperty()  # type: ignore
+    asset_id: StringProperty()  # type: ignore
 
     @classmethod
     def poll(cls, context):
+        if not get_allow_networking():
+            cls.poll_message_set(
+                "Allow Online Access in Blender's System preferences to download"
+            )
+            return False
         library = context.window_manager.gscatter.library
         return not library.loading_free_assets
 
     def execute(self, context):
-        asset: FreeAssetWidget = eval(self.target)
-        temp_dir = tempfile.mkdtemp()
-        filename = os.path.basename(asset.url)
-        dest_url = os.path.join(temp_dir, filename)
-
-        asset.installing = False
-        asset.cancel_download = False
-
+        asset = find_free_asset(self.asset_id)
+        if asset is None:
+            return {"CANCELLED"}
         if asset.downloading:
             self.report({"WARNING"}, message="Already Downloading. Cancelled.")
             return {"CANCELLED"}
 
-        area = context.area
+        folder = "Environments" if asset.asset_type == "ENVIRONMENT" else "Assets"
+        extract_dir = utils.user_library().joinpath(folder)
+        asset_browser_dir = None
+        if get_preferences().enable_experimental_features:
+            asset_browser_dir = get_asset_browser_dir(context)
 
-        def refresh():
-            area.tag_redraw()
-            if asset.downloading:
-                return 1
+        asset.downloading = True
+        asset.installing = False
+        asset.cancel_download = False
+        asset.progress = 0
 
-        def show_message():
-            bpy.ops.gscatter.popup_message(
-                "INVOKE_DEFAULT", message="Asset Installed", width=200
-            )
+        asset_id = self.asset_id
+        url, name, asset_type = asset.url, asset.name, asset.asset_type
+        state = DownloadState()
 
-        def on_download_complete():
-            library_path = utils.user_library()
-            if asset.asset_type == "ENVIRONMENT":
-                extract_dir = library_path.joinpath("Environments")
-            else:
-                extract_dir = library_path.joinpath("Assets")
+        def work():
+            install(url, extract_dir, name, asset_type, asset_browser_dir, state)
 
-            extract_dir.mkdir(parents=True, exist_ok=True)
+        def on_tick():
+            # The asset is looked up each time, as reloading the library
+            # replaces it.
+            asset = find_free_asset(asset_id)
+            if asset is None or asset.cancel_download:
+                state.cancel.set()
+            if asset is not None:
+                asset.total_size = state.total_size
+                asset.progress = state.progress
+                asset.installing = state.installing
 
-            files = os.listdir(extract_dir)
+        def on_done(_result, exception):
+            asset = find_free_asset(asset_id)
+            if asset is not None:
+                asset.downloading = False
+                asset.installing = False
+                asset.cancel_download = False
+                asset.progress = 0
 
-            with ZipFile(dest_url, "r") as file:
-                file.extractall(extract_dir)
+            if isinstance(exception, DownloadCancelled):
+                return
+            if exception is not None:
+                error(exception, f"Couldn't download {name}")
+                return
 
-            prefs = get_preferences()
-            if prefs.enable_experimental_features:
-                new_files = os.listdir(extract_dir)
-                try:
-                    asset_folder = next(file for file in new_files if file not in files)
-                except Exception:
-                    asset_folder = asset.name
-
-                product_json = extract_dir.joinpath(asset_folder, "product.json")
-                asset_dir = extract_dir.joinpath(asset_folder)
-
-                f = open(product_json, "r")
-                product_data = json.load(f)
-                f.close()
-                utils.create_asset_browser_entry(
-                    context,
-                    product_data.get("name", asset.name),
-                    product_data,
-                    asset.asset_type.upper(),
-                    asset_dir,
-                )
-                # debug(result)
-            bpy.app.timers.register(function=show_message, first_interval=0.5)
-            asset.downloading = False
-            asset.progress = 0
-            asset.installing = False
+            success(f"Installed {name}")
             utils.load_library()
+            if not bpy.app.background:
+                bpy.ops.gscatter.popup_message(
+                    "INVOKE_DEFAULT", message="Asset Installed", width=200
+                )
 
-        def on_progress():
-            refresh()
-
-        def download() -> None:
-            asset.downloading = True
-            bpy.app.timers.register(function=refresh)
-            download_file(asset, asset.url, dest_url, on_download_complete, on_progress)
-
-        thread = threading.Thread(target=download)
-        thread.start()
-        if not thread.is_alive():
-            thread.join()
+        background.run(work, on_done, on_tick)
         return {"FINISHED"}
 
 
-def requestdownloadUrl(url: str):
-    response = requests.get(url, headers={}, stream=True)
-    response.raise_for_status()  # Raise an exception if the request was not successful
-    if "application/json" not in [response.headers.get("content-type")]:
+def find_free_asset(asset_id: str):
+    library = bpy.context.window_manager.gscatter.library
+    return next((a for a in library.free_assets if a.asset_id == asset_id), None)
+
+
+def icons_dir() -> Path:
+    path = get_user_library(bpy.context).joinpath("icons")
+    path.mkdir(exist_ok=True)
+    return path
+
+
+def icon_path(icons: Path, asset_id: str) -> Path:
+    return icons.joinpath(asset_id + ".bip")
+
+
+# Everything below runs on download threads, so it mustn't touch Blender's data.
+
+
+class DownloadCancelled(Exception):
+    pass
+
+
+class DownloadState:
+    """A download's progress, shared between its thread and the interface."""
+
+    def __init__(self):
+        self.total_size = ""
+        self.progress = 0.0
+        self.installing = False
+        self.cancel = threading.Event()
+
+
+def request_download(url: str) -> requests.Response:
+    """Request a file, following Graswald's JSON reply that holds the real URL."""
+    response = requests.get(url, stream=True, timeout=TIMEOUT)
+    response.raise_for_status()
+    if response.headers.get("content-type") != "application/json":
         return response
+
     json_data = response.json()
-    if "data" not in json_data.keys():
+    download_url = (json_data.get("data") or {}).get("downloadUrl")
+    if not download_url:
         return response
 
-    if "downloadUrl" in json_data["data"].keys():
-        url = json_data["data"]["downloadUrl"]
-        response = requests.get(url, headers={}, stream=True)
-        response.raise_for_status()  # Raise an exception if the request was not successful
-        return response
-
+    response = requests.get(download_url, stream=True, timeout=TIMEOUT)
+    response.raise_for_status()
     return response
 
 
-def download_image(url: str, asset_id: str):
-    library_path = get_user_library(bpy.context)
-    user_icons_folder = library_path.joinpath("icons")
-    temp_dir = tempfile.mkdtemp()
-    filename: str = os.path.basename(url)
-    temp_path = os.path.join(temp_dir, filename)
-    try:
-        response = requestdownloadUrl(url)
-        with open(temp_path, "wb") as file:
-            for chunk in response.iter_content(chunk_size=1024):
-                file.write(chunk)
-    except requests.exceptions.RequestException as e:
-        error(e, "Error occurred while downloading file")
-        ...
-
-    # urllib.request.urlretrieve(url, temp_path)
-
-    final_path = user_icons_folder.joinpath(asset_id + ".bip")
-    shutil.copyfile(temp_path, final_path)
-    return final_path
-
-
-def download_file(
-    asset: FreeAssetWidget, url, destination, on_download_complete_handler, on_progress
-):
-    asset.cancel_download = False
-
-    try:
-        response = requestdownloadUrl(url)
-        response.raise_for_status()  # Raise an exception if the request was not successful
-
+def download_file(url: str, destination: Path, state: DownloadState = None):
+    """Download url to destination, which is only written once it's complete."""
+    partial = destination.with_name(destination.name + ".part")
+    with request_download(url) as response, open(partial, "wb") as file:
         total_size = int(response.headers.get("content-length", 0))
-        asset.total_size = utils.convert_size(total_size)
-        asset.progress = 0  # Reset progress to 0
-
-        with open(destination, "wb") as file:
-            cur = 1
-            for chunk in response.iter_content(chunk_size=1024):
-                file.write(chunk)
-                cur += len(chunk)
-                if total_size > 0 and cur > 0:
-                    asset.progress = (cur / total_size) * 100
-                # on_progress()
-                if asset.cancel_download:
-                    asset.downloading = False
-                    return False
-        success("Download complete!")
-        asset.installing = True
-        on_download_complete_handler()
-    except requests.exceptions.RequestException as e:
-        error(e, "Error occurred while downloading file")
-        asset.installing = False
-        asset.downloading = False
+        if state is not None:
+            state.total_size = utils.convert_size(total_size)
+        done = 0
+        for chunk in response.iter_content(chunk_size=64 * 1024):
+            if state is not None and state.cancel.is_set():
+                raise DownloadCancelled()
+            file.write(chunk)
+            done += len(chunk)
+            if state is not None and total_size:
+                state.progress = min(done / total_size * 100, 100)
+    os.replace(partial, destination)
 
 
-def get_free_assets_list(callback, on_done) -> Union[dict, None]:
-    def get_data():
-        try:
-            response = requestdownloadUrl(FREE_ASSETS_JSON_LIST_URL)
+def install(
+    url: str,
+    extract_dir: Path,
+    name: str,
+    asset_type: str,
+    asset_browser_dir: Path,
+    state: DownloadState,
+):
+    """Download an asset's zip into the library, and add it to the asset browser
+    if asset_browser_dir is given."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        zip_path = Path(temp_dir, os.path.basename(url) or "asset.zip")
+        download_file(url, zip_path, state)
+        state.installing = True
+
+        extract_dir.mkdir(parents=True, exist_ok=True)
+        before = set(os.listdir(extract_dir))
+        with ZipFile(zip_path, "r") as file:
+            file.extractall(extract_dir)
+
+    if asset_browser_dir is None:
+        return
+    new_folders = [f for f in os.listdir(extract_dir) if f not in before]
+    asset_dir = extract_dir.joinpath(new_folders[0] if new_folders else name)
+    product_data = json.loads(asset_dir.joinpath("product.json").read_text())
+    utils.create_asset_browser_entry(
+        None,
+        product_data.get("name", name),
+        product_data,
+        asset_type.upper(),
+        asset_dir,
+        asset_browser_dir=asset_browser_dir,
+    )
+
+
+def read_free_assets_list() -> dict:
+    """The list of free assets saved by the last successful download."""
+    path = get_asset_browser_dir().joinpath("free_assets.json")
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def fetch_free_assets(on_done):
+    """Download the list of free assets and their icons in the background, then
+    call on_done(data). If the download fails, data is the saved list."""
+    list_path = get_asset_browser_dir().joinpath("free_assets.json")
+    icons = icons_dir()
+
+    def work():
+        with request_download(FREE_ASSETS_JSON_LIST_URL) as response:
             data = response.json()
-            # debug(data)
+        for asset_data in data.get("assets", []):
+            asset_id, url = asset_data.get("asset_id"), asset_data.get("icon")
+            if not asset_id or not url or icon_path(icons, asset_id).exists():
+                continue
+            try:
+                download_file(url, icon_path(icons, asset_id))
+            except (requests.RequestException, OSError):
+                pass  # The asset is listed without an icon.
+        list_path.write_text(json.dumps(data))
+        return data
 
-            user_library = get_asset_browser_dir()
-            asset_list_path = user_library.joinpath("free_assets.json")
-            old_data = {}
-            if asset_list_path.exists():
-                f = open(asset_list_path, "r")
-                old_data = json.load(f)
-                f.close()
-            create_entry = False
-            if data != old_data:
-                info("OpenScatter: New Free Assets available...loading")
-                f = open(asset_list_path, "w")
-                f.write(json.dumps(data))
-                f.close()
-                create_entry = True
-            if callback is not None:
-                callback(data, create_entry)
-            if on_done is not None:
-                on_done()
-        except requests.exceptions.RequestException as e:
-            error(e, "Error occurred while downloading file")
-            ...
+    def finish(data, exception):
+        if exception is not None:
+            error(exception, "Couldn't download the list of free assets")
+            data = read_free_assets_list()
+        on_done(data)
 
-    thread = threading.Thread(target=get_data)
-    thread.start()
-    if not thread.is_alive():
-        thread.join()
+    background.run(work, finish)
 
 
 classes = (

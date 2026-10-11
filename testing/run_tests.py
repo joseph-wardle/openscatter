@@ -18,6 +18,10 @@ Tests:
   shared   Effects share the node groups that show no settings, and deleting
            or duplicating a system, reloading the file and editing a shared
            group all keep the scatter working.
+  free_assets
+           The free assets list and a download, from a fake local server,
+           work, and nothing is requested with online access off; a broken
+           or slow server and a cancelled download leave things as they were.
 
 reference/effects.json is from the original GScatter 0.12.0, run on the Blender
 major version each effect was saved with: 3.6 for effects saved in Blender 3.x
@@ -46,7 +50,7 @@ from pathlib import Path
 TESTING = Path(__file__).resolve().parent
 REPO = TESTING.parent
 REFERENCE = TESTING / "reference" / "effects.json"
-TESTS = ("smoke", "effects", "custom", "shared")
+TESTS = ("smoke", "effects", "custom", "shared", "free_assets")
 
 # Effects whose output Blender itself changed, so they can't match the
 # reference: {effect id: (first Blender version (major, minor) affected, reason)}.
@@ -274,11 +278,57 @@ def check_shared(result: dict) -> list[str]:
     return errors
 
 
+def check_free_assets(result: dict) -> list[str]:
+    errors = []
+    listed = [["test_plant", True]]
+
+    def check_load(label: str, r: dict, assets: list, requested: bool):
+        if r["loading_after"]:
+            errors.append(f"{label}: still loading after the download finished")
+        if r["assets"] != assets:
+            errors.append(f"{label}: expected free assets {assets}, got {r['assets']}")
+        if requested and not r["requests"]:
+            errors.append(f"{label}: nothing was requested")
+        if not requested and r["requests"]:
+            errors.append(f"{label}: requested {r['requests']} with online access off")
+
+    check_load("offline before any download", result["offline_first"], [], False)
+    check_load("loading the list", result["online"], listed, True)
+    if not result["online"]["loading_while_waiting"]:
+        errors.append("loading the list: didn't show that it was loading")
+    if not result["list_saved"]:
+        errors.append("the list wasn't saved")
+    check_load("offline", result["offline"], listed, False)
+    check_load("broken server", result["broken"], listed, True)
+    check_load("slow server", result["slow"], listed, True)
+    if result["slow"]["seconds"] > 2.5:
+        errors.append(f"slow server: took {result['slow']['seconds']} s despite the timeout")
+
+    for label in ("download", "download_broken", "cancel"):
+        r = result[label]
+        if "error" in r:
+            errors.append(f"{label}: {r['error']}")
+        elif not r["downloading_while_waiting"] or r["downloading_after"]:
+            errors.append(f"{label}: downloading was {r['downloading_while_waiting']}"
+                          f" while waiting and {r['downloading_after']} after")
+        elif not r["requests"]:
+            errors.append(f"{label}: nothing was requested")
+    if not result["installed"]:
+        errors.append("the downloaded asset wasn't installed")
+    if result["cancel"].get("seconds", 0) > 5:
+        errors.append(f"cancelling took {result['cancel']['seconds']} s")
+    if result["leftovers"]:
+        errors.append(f"failed downloads left files in the library: {result['leftovers']}")
+    if result["offline_operator"]:
+        errors.append("the Download button works with online access off")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("tests", nargs="*", metavar="test", help="smoke, effects, custom, shared (default: all)")
+    parser.add_argument("tests", nargs="*", metavar="test", help=", ".join(TESTS) + " (default: all)")
     parser.add_argument("--blender", default="blender", help="Blender executable")
     parser.add_argument("--extension-zip", type=Path, help="test this zip instead of building the repo")
     parser.add_argument("--update-reference", action="store_true", help="save the effects results as the reference")
@@ -347,6 +397,8 @@ def main():
                 errors = check_custom(result)
             elif test == "shared":
                 errors = check_shared(result)
+            elif test == "free_assets":
+                errors = check_free_assets(result)
             elif args.update_reference:
                 update_reference(result, version, zip_path)
                 continue

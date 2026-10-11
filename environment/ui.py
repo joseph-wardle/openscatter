@@ -235,7 +235,6 @@ class DownloadFreeAssetsPanel(BasePanel):
             op.tooltip = "Refresh list of available Free Assets to download. \n\u2022 Click to refresh free assets"
 
     def draw(self, context):
-        context.area.tag_redraw()
         layout = self.layout
         col = layout.column(align=True)
         library: "LibraryWidget" = context.window_manager.gscatter.library

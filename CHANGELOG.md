@@ -19,6 +19,14 @@
   links to GScatter's documentation and lists what's different.
 - Creating an environment no longer hangs Blender on Linux and macOS. If
   making its data.blend fails, it now shows an error instead of waiting forever.
+- Free asset downloads no longer change Blender's data from a background
+  thread, which could crash Blender, and a slow or unreachable server now
+  gives an error instead of waiting forever. Cancel Download works, and if
+  the list of free assets can't be downloaded, the last one is shown. With
+  Blender's online access off, nothing is downloaded, not even icons, and the
+  Download button says why it's disabled.
+- Syncing old assets with the asset browser no longer changes Blender's data
+  from a background thread.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

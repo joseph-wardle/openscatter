@@ -1,6 +1,6 @@
 """Tests that run inside Blender. Use run_tests.py rather than running this directly.
 
-    blender -b --python blender_tests.py -- <add-on module> <smoke|effects|custom|shared> <output.json>
+    blender -b --python blender_tests.py -- <add-on module> <smoke|effects|custom|shared|free_assets> <output.json>
 
 Writes the results as JSON; run_tests.py decides whether they pass.
 """
@@ -11,6 +11,7 @@ import os
 import random
 import sys
 import threading
+import time
 import traceback
 
 import bpy
@@ -358,6 +359,153 @@ def shared(module: str, folder: str) -> dict:
     return result
 
 
+class FakeServer:
+    """A local stand-in for Graswald's server, which records what's requested.
+
+    /list           the list of free assets, with one asset
+    /icon.bip       the asset's icon
+    /asset.zip      the asset
+    /trickle.zip    a zip sent slowly, to cancel
+    /slow           replies after 3 s
+    /broken         an error
+    """
+
+    def __init__(self, icon: bytes):
+        import http.server
+        import io
+        import signal
+        import zipfile
+
+        # Blender 4.2 doesn't ignore SIGPIPE, so writing to a download that
+        # was cancelled would kill it.
+        if hasattr(signal, "SIGPIPE"):
+            signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+
+        archive = io.BytesIO()
+        with zipfile.ZipFile(archive, "w") as z:
+            z.writestr("Test Plant/product.json", json.dumps({"name": "Test Plant"}))
+        self.files = {"/icon.bip": icon, "/asset.zip": archive.getvalue()}
+        self.requests = []
+        server = self
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                server.requests.append(self.path)
+                if self.path == "/list":
+                    body = json.dumps({"assets": [{
+                        "asset_id": "test_plant", "name": "Test Plant",
+                        "description": "A test", "asset_type": "3D_PLANT",
+                        "icon": server.url("/icon.bip"), "url": server.url("/asset.zip"),
+                    }]}).encode()
+                    self.reply(body, "application/json")
+                elif self.path in server.files:
+                    self.reply(server.files[self.path], "application/octet-stream")
+                elif self.path == "/trickle.zip":
+                    self.send_response(200)
+                    self.send_header("Content-Length", str(1024 * 200))
+                    self.end_headers()
+                    for _ in range(200):
+                        self.wfile.write(bytes(1024))
+                        self.wfile.flush()
+                        time.sleep(0.05)
+                elif self.path == "/slow":
+                    time.sleep(3)
+                    self.reply(b"{}", "application/json")
+                else:
+                    self.send_error(500)
+
+            def reply(self, body, content_type):
+                self.send_response(200)
+                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.httpd.daemon_threads = True
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+
+    def url(self, path: str) -> str:
+        return f"http://127.0.0.1:{self.httpd.server_port}{path}"
+
+
+def free_assets(module: str) -> dict:
+    """Load the list of free assets and download one from a fake server, with
+    online access on and off, and when the server fails, is slow, or the
+    download is cancelled."""
+    free = importlib.import_module(module + ".asset_manager.props.free_assets")
+    library_module = importlib.import_module(module + ".asset_manager.props.library")
+    asset_utils = importlib.import_module(module + ".asset_manager.utils")
+    background = importlib.import_module(module + ".utils.background")
+    icons = importlib.import_module(module + ".icons")
+    library = bpy.context.window_manager.gscatter.library
+    server = FakeServer(open(icons.get_icon_path("custom_brick"), "rb").read())
+    result = {"online_access": bpy.app.online_access}
+
+    def load(path: str, allow_networking=True) -> dict:
+        free.FREE_ASSETS_JSON_LIST_URL = server.url(path)
+        for m in (free, library_module):
+            m.get_allow_networking = lambda: allow_networking
+        server.requests.clear()
+        start = time.monotonic()
+        asset_utils.load_library(True)
+        loading = library.loading_free_assets
+        background.wait()
+        return {
+            "requests": list(server.requests),
+            "loading_while_waiting": loading,
+            "loading_after": library.loading_free_assets,
+            "assets": [(a.asset_id, bool(a.icon)) for a in library.free_assets],
+            "seconds": round(time.monotonic() - start, 1),
+        }
+
+    def download(path: str, cancel=False) -> dict:
+        if not library.free_assets:
+            return {"error": "there was no free asset to download"}
+        library.free_assets[0].url = server.url(path)
+        server.requests.clear()
+        start = time.monotonic()
+        bpy.ops.gscatter.download_free_asset(asset_id="test_plant")
+        asset = library.free_assets[0]
+        downloading = asset.downloading
+        asset.cancel_download = cancel
+        background.wait()
+        asset = library.free_assets[0]
+        return {
+            "requests": list(server.requests),
+            "downloading_while_waiting": downloading,
+            "downloading_after": asset.downloading,
+            "seconds": round(time.monotonic() - start, 1),
+        }
+
+    result["offline_first"] = load("/list", allow_networking=False)
+    result["online"] = load("/list")
+    result["list_saved"] = (
+        free.get_asset_browser_dir().joinpath("free_assets.json").exists()
+    )
+    result["offline"] = load("/list", allow_networking=False)
+    result["broken"] = load("/broken")
+    free.TIMEOUT = (2, 1)
+    result["slow"] = load("/slow")
+
+    assets_dir = asset_utils.user_library().joinpath("Assets")
+    result["download"] = download("/asset.zip")
+    result["installed"] = assets_dir.joinpath("Test Plant", "product.json").exists()
+    result["download_broken"] = download("/broken")
+    result["cancel"] = download("/trickle.zip", cancel=True)
+    result["leftovers"] = sorted(
+        p.name for p in assets_dir.glob("*") if p.name != "Test Plant"
+    )
+
+    for m in (free, library_module):
+        m.get_allow_networking = lambda: False
+    result["offline_operator"] = bpy.ops.gscatter.download_free_asset.poll()
+    return result
+
+
 def main():
     module, test, output = sys.argv[sys.argv.index("--") + 1 :]
     result = {"blender": bpy.app.version_string}
@@ -368,7 +516,8 @@ def main():
             test = {"custom": custom, "shared": shared}[test]
             result.update(test(module, os.path.dirname(output)))
         elif result["enabled"]:
-            result.update({"smoke": smoke, "effects": effects}[test](module))
+            tests = {"smoke": smoke, "effects": effects, "free_assets": free_assets}
+            result.update(tests[test](module))
     except Exception:
         result["error"] = traceback.format_exc()
     # Non-daemon threads keep background Blender from exiting.

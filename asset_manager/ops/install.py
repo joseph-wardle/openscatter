@@ -1,7 +1,6 @@
 import os
 import shutil
 import json
-import threading
 from functools import partial
 from pathlib import Path
 from zipfile import ZipFile, is_zipfile
@@ -17,7 +16,8 @@ from ..utils import create_asset_browser_entry
 from ...effects.store import effectstore, effectpresetstore
 from ...scatter.store import scattersystempresetstore
 from ...utils.getters import get_asset_browser_dir, get_user_library
-from ...utils.logger import debug, success
+from ...utils import background
+from ...utils.logger import debug, error, success
 from ...slow_task_manager.scopped_slow_task import StartSlowTask
 from typing import TYPE_CHECKING
 
@@ -455,11 +455,6 @@ class SyncInstalledAssetsOperator(Operator):
     create_object_entry: BoolProperty("Create Object Entry", default=False)
     create_lod_collection_entry: BoolProperty("Create LOD Collection", default=False)
 
-    _timer = None
-    _task = None
-    _thread = None
-    _stop_flag = threading.Event()
-
     def draw(self, context):
         layout = self.layout
 
@@ -531,92 +526,56 @@ class SyncInstalledAssetsOperator(Operator):
             self.report({"ERROR"}, "No assets selected")
             return {"CANCELLED"}
 
+        # Read everything the thread needs now, as it mustn't touch Blender's data.
+        jobs = []
+        for asset_data in selected:
+            asset: "OldAssetItem" = eval(asset_data.target)
+            jobs.append(Path(asset.blends[0].name).parent.parent)
+        asset_browser_dir = get_asset_browser_dir(context)
+        create_object_entry = self.create_object_entry
+        create_lod_collection_entry = self.create_lod_collection_entry
+
         library: "LibraryWidget" = context.window_manager.gscatter.library
         library.syncing_assets = True
         library.syncing_assets_progress = 0
-        wm = context.window_manager
-        wm.progress_begin(0, 100)
         self.report({"INFO"}, "Syncing Assets in background.")
 
-        # Start the background task
-        self._thread = threading.Thread(
-            target=self.run_background_task_with_progress, args=(context,)
-        )
-        self._thread.start()
+        progress = [0.0]
 
-        self._timer = wm.event_timer_add(0.1, window=context.window)
+        def work():
+            for i, asset_dir in enumerate(jobs):
+                product_json = asset_dir.joinpath("product.json")
+                product_data = json.loads(product_json.read_text())
+                create_asset_browser_entry(
+                    None,
+                    product_data.get("name", asset_dir.name),
+                    product_data,
+                    utils.get_asset_type(product_json_path=product_json),
+                    asset_dir,
+                    create_object_entry,
+                    create_lod_collection_entry,
+                    asset_browser_dir=asset_browser_dir,
+                )
+                progress[0] = (i + 1) / total * 100
 
-        # def show_message():
-        #     bpy.ops.gscatter.popup_message("INVOKE_DEFAULT", message="Syncing Assets in Background.", width=200)
-        # bpy.app.timers.register(show_message, first_interval=0.1)
-
-        wm.modal_handler_add(self)
-        return {"RUNNING_MODAL"}
-
-    def modal(self, context, event):
-        if event.type == "TIMER":
-            if not self._thread.is_alive():
-                context.window_manager.event_timer_remove(self._timer)
-                library: "LibraryWidget" = context.window_manager.gscatter.library
-                library.syncing_assets = False
-                library.syncing_assets_progress = 100
+        def on_tick():
+            library = bpy.context.window_manager.gscatter.library
+            if library.syncing_assets_progress != progress[0]:
+                library.syncing_assets_progress = progress[0]
                 refresh_library()
-                return {"FINISHED"}
-        return {"PASS_THROUGH"}
 
-    def run_background_task_with_progress(self, context: Context):
-        selected = [asset for asset in self.assets if asset.select]
-        total = len(selected)
-        processed_files = 0
-
-        for i in range(total):
-            processed_files += 1
-            progress = (processed_files / total) * 100
-            library: "LibraryWidget" = context.window_manager.gscatter.library
-            library.syncing_assets_progress = progress
-
-            asset_data = selected[i]
-            asset: "OldAssetItem" = eval(asset_data.target)
-            # name = getattr(asset, "product_name", asset.name)
-            asset_dir = Path(asset.blends[0].name).parent.parent
-
-            product_json = asset_dir.joinpath("product.json")
-
-            f = open(product_json, "r")
-            product_data = json.load(f)
-            f.close()
-
-            asset_type = utils.get_asset_type(product_json_path=product_json)
-            create_asset_browser_entry(
-                context,
-                product_data.get("name", asset_dir.name),
-                product_data,
-                asset_type,
-                asset_dir,
-                self.create_object_entry,
-                self.create_lod_collection_entry,
-            )
-            context.window_manager.progress_update((processed_files / total) * 100)
-
+        def on_done(_result, exception):
+            library = bpy.context.window_manager.gscatter.library
+            library.syncing_assets = False
+            library.syncing_assets_progress = 0
             refresh_library()
+            if exception is not None:
+                error(exception, "Couldn't sync the old assets")
+            else:
+                success(f"Installed {total} assets in asset browser")
 
-        # def show_message():
-        #     bpy.ops.gscatter.popup_message("INVOKE_DEFAULT", message=f"Synced {total} old assets. ", width=200)
-        # bpy.app.timers.register(show_message, first_interval=0.1)
-
-        self.report({"INFO"}, message=f"Installed {total} assets in asset browser")
-
-    def cancel(self, context):
-        self._stop_flag.set()
-        if self._thread:
-            if self._thread.is_alive():
-                self._thread.join()
-        context.window_manager.event_timer_remove(self._timer)
-        context.window_manager.progress_end()
-        library: "LibraryWidget" = context.window_manager.gscatter.library
-        library.syncing_assets = False
-        library.syncing_assets_progress = 0
-        return {"CANCELLED"}
+        background.run(work, on_done, on_tick)
+        return {"FINISHED"}
 
     def sync_assets_in_background(self, context: Context):
         selected = [asset for asset in self.assets if asset.select]

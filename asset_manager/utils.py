@@ -1,6 +1,5 @@
 import json
 import math
-import os
 import re
 import subprocess
 import zipfile
@@ -304,11 +303,11 @@ def create_asset_browser_entry(
     create_object_entry=False,
     create_lod_collection_entry=False,
     background=True,
+    asset_browser_dir: Path = None,
 ):
-    """create asset browser blend file"""
-    # prefs = get_preferences()
-
-    asset_browser_library = get_asset_browser_dir(context)
+    """Create the asset browser blend file. Pass asset_browser_dir to call this
+    from a thread, which mustn't read the preferences."""
+    asset_browser_library = asset_browser_dir or get_asset_browser_dir(context)
 
     blender_exec = Path(bpy.app.binary_path)
     script_path = (
@@ -432,20 +431,6 @@ def get_catalog_name(id: str):
             if line.startswith(id):
                 name = line.split("/")[-1].split(":")[0]
                 return name
-
-
-def clear_free_assets_entries():
-    prefix = "FREE_ASSET-"
-    asset_browser_library = get_asset_browser_dir().as_posix()
-    for filename in os.listdir(asset_browser_library):
-        if filename.startswith(prefix):
-            file_path = os.path.join(asset_browser_library, filename)
-            os.remove(file_path)
-            debug(f"OpenScatter: Deleted file: {file_path}")
-
-    asset_list_path = get_asset_browser_dir().joinpath("free_assets.json")
-    if asset_list_path.exists():
-        os.remove(asset_list_path)
 
 
 def convert_size(size_bytes):
