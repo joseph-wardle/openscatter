@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.1
 
 - OpenScatter is now offered on every platform Blender runs on, including
   Linux on ARM, since it is pure Python.
