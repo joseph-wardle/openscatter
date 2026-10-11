@@ -3,9 +3,9 @@ import bpy
 from ..utils.getters import get_preferences
 from .props import WindowManagerProps
 
-# GScatter's documentation still applies, as the UI is unchanged. Its tutorial
-# playlist is gone, so search for tutorials instead.
-DOCUMENTATION_URL = "https://www.notion.so/graswald/Help-Support-Documentation-8822cee19a4944beb30bc6f80c6c699a"
+# The README's guide links to GScatter's documentation, which still applies as
+# the UI is unchanged. GScatter's tutorial playlist is gone, so search instead.
+DOCUMENTATION_URL = "https://github.com/joseph-wardle/openscatter#using-openscatter"
 TUTORIALS_URL = "https://www.youtube.com/results?search_query=gscatter+blender+tutorial"
 ISSUES_URL = "https://github.com/joseph-wardle/openscatter/issues"
 
@@ -78,10 +78,10 @@ class ShowTutorialPopupOperator(bpy.types.Operator):
         col.separator(factor=0.5)
         op = col.operator(
             OpenUrlOperator.bl_idname,
-            text="Or Read the GScatter Documentation",
+            text="Or Read the Documentation",
             icon="HELP",
         )
-        op.tooltip = "Read the original GScatter documentation by Graswald"
+        op.tooltip = "Read how to use OpenScatter on its GitHub page"
         OpenUrlOperator.configure(op, DOCUMENTATION_URL, "openDocumentationPage")
         layout.separator(factor=1)
         col = layout.column()

@@ -8,6 +8,26 @@ OpenScatter is a community-maintained fork of **GScatter** 0.12.0 by Graswald
 GmbH, which is no longer maintained. It is not affiliated with or endorsed by
 Graswald GmbH. See [`NOTICE`](NOTICE) for credits and licensing.
 
+## Using OpenScatter
+
+Open the *OpenScatter* tab in the 3D Viewport's sidebar (<kbd>N</kbd>), pick
+the surface to scatter on as the *Emitter*, select the objects to scatter, and
+click *Scatter selected*. Add effects to a system to control where instances go
+and how they're scaled and rotated.
+
+OpenScatter's interface is the same as GScatter's, so GScatter's
+[documentation](https://www.notion.so/graswald/Help-Support-Documentation-8822cee19a4944beb30bc6f80c6c699a)
+by Graswald and GScatter tutorials on YouTube apply. What's different:
+
+- The panel, menus and messages say OpenScatter, and the Graswald logos are
+  gone.
+- Effects share the node groups that show no settings, so editing one of those
+  by hand in the node editor changes it for every effect that uses it.
+- Voronoi Texture gives a different pattern on Blender 5.0 and later.
+
+Report bugs and ask questions on the
+[issue tracker](https://github.com/joseph-wardle/openscatter/issues).
+
 ## Status
 
 Works on Blender 4.2 to 5.2. Every bundled effect gives the same result on

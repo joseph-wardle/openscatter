@@ -18,7 +18,7 @@ class InfoPanel(BasePanel):
         op = layout.operator(
             OpenUrlOperator.bl_idname, text="Documentation", icon="HELP"
         )
-        op.tooltip = "Read the original GScatter documentation by Graswald"
+        op.tooltip = "Read how to use OpenScatter on its GitHub page"
         OpenUrlOperator.configure(op, DOCUMENTATION_URL, "openDocumentationPage")
 
         op = layout.operator(OpenUrlOperator.bl_idname, text="Tutorials", icon="PLAY")
