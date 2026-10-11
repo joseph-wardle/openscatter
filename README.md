@@ -55,6 +55,9 @@ blender --command extension build --source-dir . --output-dir dist
 Install the resulting `.zip` via *Edit → Preferences → Get Extensions →
 Install from Disk*.
 
+The effect icons in `icons/` are drawn by `tools/draw_icons.py` (needs NumPy);
+run `python tools/draw_icons.py` after changing it to redraw them.
+
 ## Testing
 
 ```sh

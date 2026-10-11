@@ -29,6 +29,8 @@ The changes are recorded in this project's git history. In summary:
   brand logos (Discord, YouTube, Twitter/X).
 - Removed the bundled jsonschema, attrs, pyrsistent and Pillow packages, and
   replaced the bundled t3dn-bip package with OpenScatter's own BIP image reader.
+- Replaced GScatter's icons with icons drawn for OpenScatter or Blender's
+  built-in icons.
 - Fixes for Blender 5.x.
 
 ## Trademarks and affiliation
@@ -42,10 +44,7 @@ Assets downloaded from Graswald's servers remain subject to Graswald's own terms
 
 ## Icons
 
-- `custom_rotate`, `custom_wave`, `not_selected`, `selected`, `visibility_on`,
-  `visibility_off` icons in `icons/` are from Google's Material Design Icons
-  (https://fonts.google.com/icons), Apache License 2.0.
-- The `custom_voronoi` icon in `icons/` was drawn for OpenScatter and is
-  under the same licence as the rest of OpenScatter.
-- The `search` icon in `icons/` is from Feather Icons by @colebemis
-  (https://feathericons.com/), MIT License.
+The effect icons in `icons/` were drawn for OpenScatter by
+`tools/draw_icons.py` and are dedicated to the public domain under CC0 1.0
+(https://creativecommons.org/publicdomain/zero/1.0/). All other icons are
+Blender's built-in icons.

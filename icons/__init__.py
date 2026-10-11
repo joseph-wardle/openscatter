@@ -21,12 +21,11 @@ def load_icons_from_folder(folder_path: str):
 
 
 def get(name: str) -> int:
+    """The icon_value of an icon, or 0 (no icon) if there isn't one by that name."""
     name = name.removesuffix(".bip") if name.endswith(".bip") else name
-    if collection is None:
-        return None
     icon = all_icons.get(name)
-    if icon is None:
-        icon = all_icons.get("not_selected")
+    if collection is None or icon is None:
+        return 0
     return collection.get(icon).icon_id
 
 

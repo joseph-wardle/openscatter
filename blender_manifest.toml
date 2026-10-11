@@ -61,6 +61,7 @@ paths_exclude_pattern = [
   "/.vscode/",
   "/vendor/",
   "/testing/",
+  "/tools/",
   ".*",
   "*.zip",
   "*.blend[0-9]",

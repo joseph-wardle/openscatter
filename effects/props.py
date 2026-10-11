@@ -734,9 +734,7 @@ class EffectLayerProps(bpy.types.PropertyGroup):
         op = sub.operator(
             SelectEffectOperator.bl_idname,
             text="",
-            icon_value=icons.get("selected.bip")
-            if self.selected
-            else icons.get("not_selected.bip"),
+            icon="RADIOBUT_ON" if self.selected else "RADIOBUT_OFF",
             emboss=False,
             depress=self.selected,
         )

@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, List
 import bpy
 from bpy.types import Context
 
-from .. import icons
 from ..asset_manager.ops.popup import AssetBrowserPopup, GraswaldAssetLibraryPopup
 from ..common.props import ScatterItemProps, SceneProps
 from ..common.ui import BasePanel
@@ -181,9 +180,7 @@ class ScatterItemList(bpy.types.UIList):
             op: ToggleProxyOperator = row.operator(
                 ToggleProxyOperator.bl_idname,
                 text="",
-                icon_value=icons.get("proxy_inactive")
-                if not item.viewport_proxy
-                else icons.get("proxy_active"),
+                icon="SHADING_BBOX" if item.viewport_proxy else "SHADING_SOLID",
                 emboss=False,
             )
             op.all_except_current = op.all = False
@@ -193,7 +190,7 @@ class ScatterItemList(bpy.types.UIList):
             #     item,
             #     "viewport_proxy",
             #     icon_only=True,
-            #     icon_value=icons.get('proxy_inactive') if not item.viewport_proxy else icons.get('proxy_active'),
+            #     icon="SHADING_BBOX" if item.viewport_proxy else "SHADING_SOLID",
             #     emboss=False,
             #     toggle=True,
             # )

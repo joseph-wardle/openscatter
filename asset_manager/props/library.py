@@ -15,7 +15,6 @@ from bpy.props import (
 from bpy.types import Context, UILayout
 from bpy_extras import asset_utils
 
-from ... import icons
 from ...common.props import WindowManagerProps
 from ...environment.ops import AddEnvironmentOperator
 from ...scatter.store import scattersystempresetstore
@@ -64,7 +63,7 @@ def enumerate_environments(self, context: bpy.types.Context):
             "SELECT_TEMPLATE",
             "Select Environment",
             "",
-            previews.get(icons.get_icon_path("select_template")).icon_id,
+            "WORLD",
             0,
         )
     ]
