@@ -9,6 +9,7 @@ from ..common.ui import BasePanel
 from ..effects.props import EffectLayerProps
 from ..scatter.utils import get_available_systems
 from ..utils.getters import (
+    get_allow_networking,
     get_node_tree,
     get_preferences,
     get_scatter_props,
@@ -275,9 +276,10 @@ class EmptyScatterItemList(
             row = col.row()
             row.alignment = "CENTER"
             row.label(text="AssetBrowser to access Graswald Assets.")
-            row = col.row()
-            row.alignment = "CENTER"
-            row.label(text="Download your first free assets below!", icon="IMPORT")
+            if get_allow_networking():
+                row = col.row()
+                row.alignment = "CENTER"
+                row.label(text="Download free assets from Graswald below.", icon="IMPORT")
             row = col.row()
             row.label(text="")
             row.scale_y = 1.1
@@ -583,7 +585,10 @@ class GscatterStartPanel(BasePanel):
             line.label(text="environment installed yet.")
             line = col.row()
             line.alignment = "CENTER"
-            line.label(text="Download a free one below.")
+            if get_allow_networking():
+                line.label(text="Download a free one from Graswald below.")
+            else:
+                line.label(text="Allow online access to download free ones.")
             # if prefs.enable_experimental_features:
             #     col.operator(DownloadFreeEnvironmentOperator.bl_idname, text="Download Free Environment.")
 

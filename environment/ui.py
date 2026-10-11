@@ -185,7 +185,7 @@ class EnvironmentPropsPanel(BasePanel):
 
 class DownloadFreeAssetsPanel(BasePanel):
     bl_idname = "GSCATTER_PT_DownloadFreeAssets"
-    bl_label = "Download Free Assets"
+    bl_label = "Free Assets from Graswald"
     bl_order = 120
     bl_options = {"DEFAULT_CLOSED"}
 
