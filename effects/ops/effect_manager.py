@@ -43,6 +43,7 @@ class UpdateEffectOperator(bpy.types.Operator):
     bl_idname = "gscatter.update_effect_manager"
     bl_label = "Update"
     bl_description: str = "Update an effect"
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -170,6 +171,7 @@ class CreateNewEffectOperator(bpy.types.Operator):
 
     bl_idname: str = "gscatter.create_effect_manager"
     bl_label: str = "Create Effect"
+    bl_options = {"REGISTER", "UNDO"}
 
     namespace: bpy.props.StringProperty(name="Namespace", default="user")  # type: ignore
 
@@ -178,6 +180,9 @@ class CreateNewEffectOperator(bpy.types.Operator):
         prefs = get_preferences(context)
         wm_props: WindowManagerProps = context.window_manager.gscatter
         if context.object is None:
+            return False
+        # The new node goes in the tree shown in the node editor.
+        if getattr(context.space_data, "edit_tree", None) is None:
             return False
         active_modifier = context.object.modifiers.active
         if active_modifier and active_modifier.type == "NODES":
@@ -355,10 +360,14 @@ class EditEffectNodeTreeOperator(bpy.types.Operator):
     bl_idname: str = "gscatter.edit_effect_tree"
     bl_label: str = "Edit Effect Node Tree"
     bl_description: str = "Edit an effects node tree"
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context: bpy.types.Context) -> bool:
         if context.object is None:
+            return False
+        # The new node goes in the tree shown in the node editor.
+        if getattr(context.space_data, "edit_tree", None) is None:
             return False
         active_modifier = context.object.modifiers.active
         if active_modifier and active_modifier.type == "NODES":

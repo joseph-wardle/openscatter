@@ -625,6 +625,7 @@ class SyncInstalledAssetsOperator(Operator):
 class DeleteCatalogEntryOperator(Operator):
     bl_idname = "gscatter.delete_catalog_entry"
     bl_label = "Delete Asset from Asset Browser"
+    bl_description = "Remove this asset's catalog and file from the Graswald asset library"
 
     catalog_id: StringProperty()
 
@@ -670,6 +671,7 @@ class DeleteCatalogEntryOperator(Operator):
 class RefreshAssetBrowserOperator(Operator):
     bl_idname = "gscatter.refresh_asset_browser"
     bl_label = "Assets installed. Refresh Asset Browser"
+    bl_description = "Refresh the asset browser to show newly installed assets"
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self, width=300)

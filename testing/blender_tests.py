@@ -1,6 +1,6 @@
 """Tests that run inside Blender. Use run_tests.py rather than running this directly.
 
-    blender -b --python blender_tests.py -- <add-on module> <smoke|effects|custom|shared|free_assets> <output.json>
+    blender -b --python blender_tests.py -- <add-on module> <test> <output.json>
 
 Writes the results as JSON; run_tests.py decides whether they pass.
 """
@@ -506,6 +506,218 @@ def free_assets(module: str) -> dict:
     return result
 
 
+def scene_state() -> dict:
+    """What the operators in undo() can change: objects, collections, node
+    trees with their effects, and a few settings."""
+    scene = bpy.context.scene
+    groups = {}
+    for g in bpy.data.node_groups:
+        groups[g.name] = {
+            "nodes": sorted(
+                (n.name, n.label, n.node_tree.name if getattr(n, "node_tree", None) else "",
+                 tuple(i.default_value for i in n.inputs if i.type == "STRING"))
+                for n in g.nodes
+            ),
+            "links": sorted(
+                (l.from_node.name, l.from_socket.identifier, l.to_node.name, l.to_socket.identifier)
+                for l in g.links
+            ),
+            "effects": [(e.name, e.selected) for e in g.gscatter.effects],
+        }
+    return {
+        "marker": scene.get("undo_marker"),
+        "mode": bpy.context.mode,
+        "objects": sorted(
+            (o.name, o.type, tuple(vg.name for vg in o.vertex_groups),
+             tuple((i.name, tuple(i.ntree_version)) for i in o.gscatter.scatter_items))
+            for o in bpy.data.objects
+        ),
+        "collections": sorted(
+            (c.name, tuple(sorted(ch.name for ch in c.children)), tuple(sorted(o.name for o in c.objects)))
+            for c in bpy.data.collections
+        ),
+        "node_groups": groups,
+        "environment_preview": scene.gscatter.environment_creator.preview,
+    }
+
+
+def view3d_override() -> dict:
+    window = bpy.context.window_manager.windows[0]
+    area = next(a for a in window.screen.areas if a.type == "VIEW_3D")
+    region = next(r for r in area.regions if r.type == "WINDOW")
+    return {"window": window, "area": area, "region": region}
+
+
+def node_editor_override() -> dict:
+    """Show the active object's node tree in the largest non-3D area."""
+    window = bpy.context.window_manager.windows[0]
+    area = max(
+        (a for a in window.screen.areas if a.type != "VIEW_3D"),
+        key=lambda a: a.width * a.height,
+    )
+    area.ui_type = "GeometryNodeTree"
+    # Blender 4.2 only shows the active object's tree once the editor redraws.
+    space = area.spaces.active
+    space.node_tree = bpy.context.active_object.modifiers.active.node_group
+    region = next(r for r in area.regions if r.type == "WINDOW")
+    return {"window": window, "area": area, "region": region, "space_data": space}
+
+
+def check_undo(op: str, override: dict = None, invoke=False, **properties) -> dict:
+    """Run an operator as a button would, then undo once. A marker set between
+    two undo steps before running it shows whether undo went back too far,
+    which it does if the operator didn't add an undo step of its own."""
+    print(f"undo: {op}", flush=True)
+    override = override or view3d_override()
+    # Operators called from scripts only add undo steps when passed undo=True.
+    context = "INVOKE_DEFAULT" if invoke else "EXEC_DEFAULT"
+    run = lambda: getattr(bpy.ops.gscatter, op)(context, True, **properties)
+    scene = bpy.context.scene
+    with bpy.context.temp_override(**override):
+        bpy.ops.ed.undo_push(message="before marker")
+        scene["undo_marker"] = scene.get("undo_marker", 0) + 1
+        bpy.ops.ed.undo_push(message="marker")
+        before = scene_state()
+        try:
+            run()
+        except Exception as e:
+            return {"error": error_message(e)}
+        after = scene_state()
+        bpy.ops.ed.undo()
+        undone = scene_state()
+        if bpy.context.mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
+    return {
+        "changed": sorted(k for k in before if before[k] != after[k]),
+        "not_undone": sorted(k for k in before if before[k] != undone[k]),
+    }
+
+
+def undo(module: str) -> dict:
+    """Run each operator that changes the scene, then undo it, from the
+    interface (background Blender can't undo)."""
+    getters = importlib.import_module(module + ".utils.getters")
+    presets = importlib.import_module(module + ".scatter.store").scattersystempresetstore
+    misc = importlib.import_module(module + ".asset_manager.ops.misc")
+    result = {}
+
+    def category_tree():
+        return getters.get_node_tree(bpy.context).nodes["DISTRIBUTION"].node_tree
+
+    def setup(effect_count=2):
+        """A fresh scatter with effect_count effects in Distribution, the
+        last one selected."""
+        with bpy.context.temp_override(**view3d_override()):
+            if bpy.context.mode != "OBJECT":
+                bpy.ops.object.mode_set(mode="OBJECT")
+            system = scatter()
+            for effect in [e for e in user_effects(module) if "DISTRIBUTION" in e.categories][:effect_count]:
+                add_effect(effect)
+            bpy.ops.ed.undo_push(message="setup")
+        return system
+
+    setup()
+    first = category_tree().gscatter.effects[0]
+    result["select_effect"] = check_undo("select_effect", invoke=True, effect_name=first.name)
+
+    setup()
+    name = category_tree().gscatter.effects[0].name
+    result["move_effect"] = check_undo("move_effect", effect_name=name, up=True)
+
+    setup()
+    effects = category_tree().gscatter.effects
+    node_name, other = effects[0].group_node.name, effects[1].group_node.node_tree.name
+    result["set_effect"] = check_undo("set_effect", node_name=node_name, type=other)
+
+    setup(0)
+    weight_map = None
+    for effect in user_effects(module):
+        if "DISTRIBUTION" not in effect.categories:
+            continue
+        add_effect(effect)
+        layer = category_tree().gscatter.get_selected()
+        inputs = [i.name for i in layer.effect_node.inputs if i.name.endswith("Weight Map")]
+        if inputs:
+            weight_map = (layer.name, inputs[0])
+            break
+        bpy.ops.gscatter.delete_effect()
+    if weight_map:
+        bpy.ops.ed.undo_push(message="weight map effect")
+        result["paint_weight_map"] = check_undo(
+            "paint_weight_map", effect_name=weight_map[0], input_name=weight_map[1]
+        )
+    else:
+        result["paint_weight_map"] = {"error": "no effect has a weight map"}
+
+    setup()
+    item = bpy.data.objects["Plane"].gscatter.scatter_items[0]
+    item.ntree_version = (2, 1, 0)
+    bpy.ops.ed.undo_push(message="old version")
+    result["update_scatter_system_tree"] = check_undo(
+        "update_scatter_system_tree", mode="SINGLE", system_index=0
+    )
+
+    setup()
+    preset = next(iter(presets._item_index))
+    result["change_scatter_system_preset"] = check_undo(
+        "change_scatter_system_preset", type=preset
+    )
+
+    system = setup()
+    first_system = system.name
+    with bpy.context.temp_override(**view3d_override()):
+        bpy.ops.mesh.primitive_plane_add(size=10, location=(0, 30, 0))
+        second = bpy.context.active_object
+        bpy.ops.mesh.primitive_cube_add(size=0.1, location=(20, 30, 0))
+        cube = bpy.context.active_object
+        second.select_set(True)
+        bpy.context.view_layer.objects.active = second
+        with bpy.context.temp_override(active_object=second, selected_objects=[second, cube], object=second):
+            bpy.ops.gscatter.scatter_selected_to_active()
+        bpy.ops.ed.undo_push(message="second surface")
+    result["set_system"] = check_undo("set_system", type=first_system, index=0)
+
+    for op in ("realize_scatter_system", "apply_scatter_system"):
+        system = setup()
+        with bpy.context.temp_override(**view3d_override()):
+            bpy.ops.object.select_all(action="DESELECT")
+            system.select_set(True)
+            bpy.context.view_layer.objects.active = system
+            bpy.ops.ed.undo_push(message="select system")
+        result[op] = check_undo(op)
+
+    setup()
+    result["set_environment_preview"] = check_undo(
+        "set_environment_preview", filepath="/nowhere/preview.png"
+    )
+
+    # The effect manager's operators act on the node editor.
+    setup()
+    override = node_editor_override()
+    wm_props = bpy.context.window_manager.gscatter
+    wm_props.effect_manager_props.effect_type_toggle = "USER"
+    result["create_effect_manager"] = check_undo("create_effect_manager", override)
+
+    store = importlib.import_module(module + ".effects.store").effectstore
+    wm_props.effect_items.clear()
+    for effect in sorted(store.get_all(), key=lambda e: e.name):
+        if effect.namespace == "user":
+            item = wm_props.effect_items.add()
+            item.name, item.id, item.version = effect.name, effect.id, effect.effect_version
+    wm_props.effect_index = 0
+    result["edit_effect_tree"] = check_undo("edit_effect_tree", override)
+
+    with bpy.context.temp_override(**override):
+        bpy.ops.gscatter.edit_effect_tree()
+        bpy.ops.ed.undo_push(message="edit effect")
+    wm_props.effect_properties.name = "Renamed Effect"
+    result["update_effect_manager"] = check_undo("update_effect_manager", override)
+
+    # Using an item needs an installed asset, so only check it adds an undo step.
+    result["use_item"] = {"has_undo": "UNDO" in misc.UseItemOperator.bl_options}
+    return result
+
+
 def main():
     module, test, output = sys.argv[sys.argv.index("--") + 1 :]
     result = {"blender": bpy.app.version_string}
@@ -516,7 +728,7 @@ def main():
             test = {"custom": custom, "shared": shared}[test]
             result.update(test(module, os.path.dirname(output)))
         elif result["enabled"]:
-            tests = {"smoke": smoke, "effects": effects, "free_assets": free_assets}
+            tests = {"smoke": smoke, "effects": effects, "free_assets": free_assets, "undo": undo}
             result.update(tests[test](module))
     except Exception:
         result["error"] = traceback.format_exc()
@@ -533,4 +745,8 @@ def main():
     os._exit(0)
 
 
-main()
+if bpy.app.background:
+    main()
+else:
+    # With the interface, wait for the window to open first.
+    bpy.app.timers.register(main, first_interval=1)

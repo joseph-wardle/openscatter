@@ -84,8 +84,15 @@ and home folder, so your own setup and library aren't touched. Then it runs:
 - `shared`: effects share the node groups that show no settings, and
   deleting or duplicating a system, reloading the file and editing a shared
   group all keep the scatter working.
+- `free_assets`: the free asset list and a download, from a fake local
+  server, work; nothing is requested with online access off; and a broken or
+  slow server or a cancelled download leaves things as they were.
+- `undo`: each operator that changes the scene can be undone in one step.
+  Undo needs Blender's interface, so this runs Blender on a virtual display
+  and is skipped if [Xvfb](https://www.x.org/releases/current/doc/man/man1/Xvfb.1.xhtml)
+  isn't installed (or set `XVFB` to its path).
 
-GitHub Actions runs all four on Blender 4.2 and 5.2 for every push. Run them
+GitHub Actions runs them all on Blender 4.2 and 5.2 for every push. Run them
 yourself against any other version you support, especially new releases.
 
 ## License

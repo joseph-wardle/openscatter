@@ -6,7 +6,7 @@ class RealizeSystemOperator(bpy.types.Operator):
     bl_idname = "gscatter.realize_scatter_system"
     bl_label = "Realize System"
     bl_description = "Realize System's Instances as real objects with shared data"
-    bl_options = {"REGISTER"}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
@@ -44,7 +44,7 @@ class ApplySystemOperator(bpy.types.Operator):
     bl_idname = "gscatter.apply_scatter_system"
     bl_label = "Apply Scatter System"
     bl_description = "Apply Scatter System, which merges all plants to a new single mesh \n\u2022 Warning! \nCan result in very high polycounts and will slow down your system"
-    bl_options = {"REGISTER"}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -94,7 +94,8 @@ class ApplySystemOperator(bpy.types.Operator):
             bpy.ops.object.convert()
 
         bpy.data.node_groups.remove(new_system_tree)
-        return {"CANCELLED"}
+        self.report({"INFO"}, "Applied the scatter system")
+        return {"FINISHED"}
 
 
 classes = (

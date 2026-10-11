@@ -65,6 +65,7 @@ class SelectIconOperator(bpy.types.Operator):
 class ReloadIconsOperator(bpy.types.Operator):
     bl_idname = "gscatter.reload_icons"
     bl_label = "Reload Icons"
+    bl_description = "Load the icons in the library's icons folder again"
     bl_options = {"REGISTER", "INTERNAL"}
 
     def execute(self, context):

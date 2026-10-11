@@ -289,8 +289,8 @@ class CreateEnvironmentOperator(Operator):
 class PreviewOperator(bpy.types.Operator):
     bl_idname = "gscatter.set_environment_preview"
     bl_label = "Set Preview Image"
-    bl_description = "Opens file selector, after executes"
-    bl_options = {"REGISTER"}
+    bl_description = "Choose the preview image for the new environment"
+    bl_options = {"REGISTER", "UNDO"}
 
     filepath: bpy.props.StringProperty(subtype="FILE_PATH")
     filter_glob: bpy.props.StringProperty(

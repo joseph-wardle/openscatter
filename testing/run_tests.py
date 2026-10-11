@@ -22,6 +22,9 @@ Tests:
            The free assets list and a download, from a fake local server,
            work, and nothing is requested with online access off; a broken
            or slow server and a cancelled download leave things as they were.
+  undo     Each operator that changes the scene can be undone in one step.
+           This needs Blender's interface, so it runs on a virtual display
+           and is skipped if Xvfb isn't installed (or set XVFB to its path).
 
 reference/effects.json is from the original GScatter 0.12.0, run on the Blender
 major version each effect was saved with: 3.6 for effects saved in Blender 3.x
@@ -41,6 +44,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -50,7 +54,8 @@ from pathlib import Path
 TESTING = Path(__file__).resolve().parent
 REPO = TESTING.parent
 REFERENCE = TESTING / "reference" / "effects.json"
-TESTS = ("smoke", "effects", "custom", "shared", "free_assets")
+TESTS = ("smoke", "effects", "custom", "shared", "free_assets", "undo")
+INTERFACE_TESTS = ("undo",)
 
 # Effects whose output Blender itself changed, so they can't match the
 # reference: {effect id: (first Blender version (major, minor) affected, reason)}.
@@ -68,6 +73,26 @@ def run(cmd: list, env: dict, timeout: int):
         cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout
     )
     return proc.returncode, proc.stdout
+
+
+def start_display():
+    """Start a virtual X display for tests that need Blender's interface.
+    Returns (Xvfb process, display), or None if Xvfb isn't installed."""
+    xvfb = os.environ.get("XVFB") or shutil.which("Xvfb")
+    if not xvfb:
+        return None
+    read, write = os.pipe()
+    proc = subprocess.Popen(
+        [xvfb, "-displayfd", str(write), "-screen", "0", "1280x1024x24", "-nolisten", "tcp"],
+        pass_fds=(write,), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    os.close(write)
+    with os.fdopen(read) as f:
+        display = f.readline().strip()
+    if not display:
+        proc.kill()
+        sys.exit("Xvfb didn't start")
+    return proc, ":" + display
 
 
 def extension_id(zip_path: Path) -> str:
@@ -324,6 +349,23 @@ def check_free_assets(result: dict) -> list[str]:
     return errors
 
 
+def check_undo(result: dict) -> list[str]:
+    errors = []
+    for op, r in sorted(result.items()):
+        if not isinstance(r, dict):
+            continue
+        if "error" in r:
+            errors.append(f"{op}: {r['error']}")
+        elif "has_undo" in r:
+            if not r["has_undo"]:
+                errors.append(f"{op}: has no UNDO option")
+        elif not r["changed"]:
+            errors.append(f"{op}: changed nothing, so its undo wasn't tested")
+        elif r["not_undone"]:
+            errors.append(f"{op}: undo didn't restore {', '.join(r['not_undone'])}")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -368,14 +410,29 @@ def main():
         module = install(args.blender, zip_path, version, env, args.timeout)
         print(f"Testing {zip_path.name} ({module}) on Blender {version[0]}.{version[1]}")
         failed = False
+        display = None
         for test in tests:
             output = tmp / f"{test}.json"
+            test_env, background = env, ["-b"]
+            if test in INTERFACE_TESTS:
+                display = display or start_display()
+                if display is None:
+                    print(f"skip {test}: needs Xvfb")
+                    continue
+                # Never the desktop's own display: without WAYLAND_DISPLAY,
+                # Blender still finds the desktop's Wayland socket in
+                # XDG_RUNTIME_DIR, so give it an empty one.
+                runtime = tmp / "runtime"
+                runtime.mkdir(mode=0o700, exist_ok=True)
+                test_env = {k: v for k, v in env.items() if k != "WAYLAND_DISPLAY"}
+                test_env.update(DISPLAY=display[1], XDG_RUNTIME_DIR=str(runtime))
+                background = []
             try:
                 code, log = run(
-                    [args.blender, "-b", "--python-exit-code", "1",
+                    [args.blender, *background, "--python-exit-code", "1",
                      "--python", str(TESTING / "blender_tests.py"),
                      "--", module, test, str(output)],
-                    env, args.timeout,
+                    test_env, args.timeout,
                 )
             except subprocess.TimeoutExpired:
                 print(f"FAIL {test}: Blender didn't exit within {args.timeout} s")
@@ -399,6 +456,8 @@ def main():
                 errors = check_shared(result)
             elif test == "free_assets":
                 errors = check_free_assets(result)
+            elif test == "undo":
+                errors = check_undo(result)
             elif args.update_reference:
                 update_reference(result, version, zip_path)
                 continue
@@ -414,6 +473,9 @@ def main():
                     print(f"  {error}")
             else:
                 print(f"ok   {test}")
+
+        if display:
+            display[0].kill()
 
     sys.exit(1 if failed else 0)
 

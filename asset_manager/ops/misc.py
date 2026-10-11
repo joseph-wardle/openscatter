@@ -62,7 +62,7 @@ class UseItemOperator(bpy.types.Operator):
     bl_idname = "gscatter.use_item"
     bl_label = "Use Item"
     bl_description = "Use selected item"
-    bl_options = {"REGISTER", "INTERNAL"}
+    bl_options = {"REGISTER", "INTERNAL", "UNDO"}
 
     target: bpy.props.StringProperty(name="Target")
     effect_name: bpy.props.StringProperty()

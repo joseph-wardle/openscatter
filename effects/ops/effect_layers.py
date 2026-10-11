@@ -342,7 +342,7 @@ class VisualizeOffOperator(VisualizeEffectOperator):
 
 class SelectEffectOperator(bpy.types.Operator):
     bl_idname = "gscatter.select_effect"
-    bl_options = {"REGISTER", "INTERNAL"}
+    bl_options = {"REGISTER", "INTERNAL", "UNDO"}
     bl_label = "Select Effect"
     bl_description = "Select Effect"
 
@@ -363,6 +363,7 @@ class MoveEffectOperator(bpy.types.Operator):
     bl_idname = "gscatter.move_effect"
     bl_label = "Move Effect"
     bl_description = ""
+    bl_options = {"REGISTER", "UNDO"}
 
     up: bpy.props.BoolProperty(default=True)
     effect_name: bpy.props.StringProperty()
@@ -491,6 +492,8 @@ class AddEffectOperator(bpy.types.Operator):
 class PaintWeightMapOperator(bpy.types.Operator):
     bl_idname = "gscatter.paint_weight_map"
     bl_label = "Paint Weight Map"
+    bl_description = "Paint this effect's weight map on the scatter surface, or go back to Object Mode"
+    bl_options = {"REGISTER", "UNDO"}
 
     effect_name: bpy.props.StringProperty()
     input_name: bpy.props.StringProperty()
@@ -788,6 +791,7 @@ class SetEffectListOperator(bpy.types.Operator):
     bl_idname: str = "gscatter.set_effect"
     bl_label: str = "Effects"
     bl_description: str = "Select from available effects"
+    bl_options = {"REGISTER", "UNDO"}
 
     node_name: bpy.props.StringProperty()
     category: bpy.props.StringProperty()

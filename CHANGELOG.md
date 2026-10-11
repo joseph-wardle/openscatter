@@ -27,6 +27,11 @@
   Download button says why it's disabled.
 - Syncing old assets with the asset browser no longer changes Blender's data
   from a background thread.
+- Ctrl+Z now undoes changing a system's preset, linking a system, moving,
+  selecting or swapping an effect, painting a weight map, updating an old
+  system, realizing or applying a system, using an asset, and the effect
+  manager's create, edit and update buttons, instead of also undoing the step
+  before. Undoing Apply Scatter System no longer crashes Blender.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

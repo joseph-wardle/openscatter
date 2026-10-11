@@ -61,6 +61,7 @@ class CloseCompatibilityWarningOperator(bpy.types.Operator):
 class ShowTutorialPopupOperator(bpy.types.Operator):
     bl_idname = "gscatter.show_tutorial_popup"
     bl_label = "Get Started With OpenScatter"
+    bl_description = "Show links to OpenScatter's guide and tutorials"
 
     def draw(self, context):
         layout = self.layout

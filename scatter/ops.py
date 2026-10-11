@@ -586,6 +586,7 @@ class UpdateScatterSystemTreeOperator(bpy.types.Operator):
 
     bl_idname = "gscatter.update_scatter_system_tree"
     bl_label = "OpenScatter Update Scatter System"
+    bl_options = {"REGISTER", "UNDO"}
 
     mode: bpy.props.EnumProperty(
         name="Mode",
@@ -774,7 +775,7 @@ class ChangePresetOperator(bpy.types.Operator):
 
     bl_idname: str = "gscatter.change_scatter_system_preset"
     bl_label: str = "Change Scatter System Preset"
-    # bl_description: str = "Change the current preset to the selected preset"
+    bl_options = {"REGISTER", "UNDO"}
 
     type: bpy.props.StringProperty()
 
@@ -967,6 +968,7 @@ class SetSystemListOperator(bpy.types.Operator):
     bl_idname: str = "gscatter.set_system"
     bl_label: str = "Systems"
     bl_description: str = "Select from available systems"
+    bl_options = {"REGISTER", "UNDO"}
 
     type: bpy.props.EnumProperty(
         name="Systems",
