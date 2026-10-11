@@ -1,11 +1,9 @@
-#  * Copyright (C) 2024 Graswald GmbH - All Rights Reserved
-#  * Modified 2026 by Joseph Wardle (OpenScatter, a fork of GScatter)
-#  * You may use, distribute and modify this code under the
-#  * terms of the GPLv3 license.
-#  *
-#  * You should have received a copy of the GPLv3 license with
-#  * this file. If not, see <https://www.gnu.org/licenses/>.
-#  *
+# SPDX-FileCopyrightText: 2024 Graswald GmbH
+# SPDX-FileCopyrightText: 2026 Joseph Wardle
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# OpenScatter, a fork of GScatter by Graswald GmbH. See NOTICE and LICENSE.
 
 from . import (
     asset_manager,
