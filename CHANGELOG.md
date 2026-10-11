@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- OpenScatter is now offered on every platform Blender runs on, including
+  Linux on ARM, since it is pure Python.
 - Moving and editing objects is no longer slowed down by the number of
   effects in the file. The add-on searched every effect for an Active Camera
   input on every scene update; it now does so only when the scene camera or
