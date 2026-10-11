@@ -5,6 +5,7 @@
 Writes the results as JSON; run_tests.py decides whether they pass.
 """
 
+import gc
 import importlib
 import json
 import os
@@ -125,8 +126,73 @@ def smoke(module: str) -> dict:
     result["effects_added"] = added
     result["effects_failed"] = failed
     result["icons"] = icons(module)
+    result["enums"] = enum_names(module)
     bpy.ops.preferences.addon_disable(module=module)
     result["handlers_left"] = handlers(module)
+    return result
+
+
+def enum_owners(module: str) -> list:
+    """(owner, property) for the dropdowns whose items a callback makes, on the
+    smoke test's system."""
+    wm = bpy.context.window_manager
+    layers = [layer for group in bpy.data.node_groups for layer in group.gscatter.effects]
+    owners = [
+        (bpy.context.preferences.addons[module].preferences, "default_scatter_preset"),
+        (wm.gscatter.library, "presets"),
+        (wm.gscatter.effect_properties, "default_blend_type"),
+        (layers[0], "blend_type"),
+    ]
+    owners += [
+        (dropdown, "dropdown_items")
+        for layer in layers
+        for dropdown in layer.dropdowns
+    ][:1]
+    for op, prop in (
+        ("add_effect", "type"),
+        ("duplicate_effect", "target"),
+        ("add_existing_effect", "type"),
+        ("set_effect", "type"),
+        ("set_system", "type"),
+        ("create_linked_system", "type"),
+        ("add_environment_property", "inputs"),
+    ):
+        owners.append((wm.operator_properties_last(f"gscatter.{op}"), prop))
+    return owners
+
+
+def enum_names(module: str) -> dict:
+    """Read each dropdown's names through Blender many times, freeing memory in
+    between, and check they don't change. Blender doesn't copy the strings the
+    items callback returns, so freed ones would come back garbled."""
+    wm = bpy.context.window_manager
+    wm.gscatter.effect_properties.blend_types.set(["ADD", "MIX"])
+    result = {}
+    for owner, prop in enum_owners(module):
+        name = f"{type(owner).__name__}.{prop}"
+        # Operator properties are OperatorProperties; their class is in bpy.types.
+        cls = getattr(bpy.types, owner.bl_rna.identifier, type(owner))
+        callback = next(
+            c.__annotations__[prop]
+            for c in cls.__mro__
+            if prop in getattr(c, "__annotations__", {})
+        ).keywords["items"]
+        first = callback(owner, bpy.context)
+        expected = {item[0]: item[1] for item in first if item[0]}
+        wrong = set()
+        for _ in range(20):
+            gc.collect()
+            junk = [str(n) * 50 for n in range(2000)]  # reuse freed memory
+            for identifier, label in expected.items():
+                got = bpy.types.UILayout.enum_item_name(owner, prop, identifier)
+                if got != label:
+                    wrong.add(f"{label!r} read as {got!r}")
+            del junk
+        result[name] = {
+            "items": len(expected),
+            "kept": callback(owner, bpy.context) is first,
+            "wrong": sorted(wrong)[:3],
+        }
     return result
 
 

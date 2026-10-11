@@ -17,7 +17,7 @@ from bpy_extras import asset_utils
 from ...common.props import WindowManagerProps
 from ...environment.ops import AddEnvironmentOperator
 from ...scatter.store import scattersystempresetstore
-from ...utils import wrap_text
+from ...utils import enums, wrap_text
 from ...utils.getters import (
     get_allow_networking,
     get_asset_browser_dir,
@@ -53,7 +53,7 @@ def _get_system_presets(self, context):
     for index, preset in enumerate(presets):
         items.append((preset.id, preset.name, "", "", index))
 
-    return items
+    return enums.keep("system_presets", self, items)
 
 
 def enumerate_environments(self, context: bpy.types.Context):

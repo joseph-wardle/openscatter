@@ -7,6 +7,7 @@ from bpy.types import AddonPreferences, Context, UILayout
 from .. import icons
 from ..asset_manager.callbacks import create_library
 from ..scatter.store import scattersystempresetstore
+from ..utils import enums
 from ..utils.getters import get_package, get_preferences
 from ..utils.logger import update_log_level
 from .props import ProxySettingsProps
@@ -26,7 +27,7 @@ def _get_system_presets(self, context):
     for index, preset in enumerate(presets):
         items.append((preset.id, preset.name, "", "", index))
 
-    return items
+    return enums.keep("system_presets", self, items)
 
 
 class GScatterPreferences(AddonPreferences):

@@ -69,8 +69,9 @@ This builds the extension and installs it into a throwaway Blender profile
 and home folder, so your own setup and library aren't touched. Then it runs:
 
 - `smoke`: the extension enables, scatters, every effect can be added and
-  every icon loads, nothing would stop background Blender from exiting, and
-  disabling it removes all its handlers.
+  every icon loads, dropdowns built from the scene keep their option names,
+  nothing would stop background Blender from exiting, and disabling it
+  removes all its handlers.
 - `effects`: every version of every effect, added alone to a fresh scatter
   in each of its categories, gives the same result as
   `testing/reference/effects.json`, with default settings and with influence,

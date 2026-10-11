@@ -32,6 +32,9 @@
   system, realizing or applying a system, using an asset, and the effect
   manager's create, edit and update buttons, instead of also undoing the step
   before. Undoing Apply Scatter System no longer crashes Blender.
+- Dropdowns whose options depend on the scene, like presets, blend types,
+  effects and systems, keep their option names in memory as Blender requires,
+  so the names can't turn into garbage or crash Blender.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

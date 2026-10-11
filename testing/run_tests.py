@@ -6,7 +6,8 @@ folder, and test it.
     python testing/run_tests.py --blender ~/blender-5.2/blender smoke
 
 Tests:
-  smoke    The extension enables, scatters, every effect can be added, and
+  smoke    The extension enables, scatters, every effect can be added,
+           dropdowns built from the scene keep their option names, and
            disabling it removes all its handlers.
   effects  Each effect version, added alone to a fresh scatter in each of its
            categories, gives the same instance count and transforms as in
@@ -161,6 +162,13 @@ def check_smoke(result: dict) -> list[str]:
         errors.append(
             "handlers left after disabling: " + ", ".join(result["handlers_left"])
         )
+    for name, enum in result["enums"].items():
+        if not enum["items"]:
+            errors.append(f"dropdown {name} has no items")
+        if not enum["kept"]:
+            errors.append(f"dropdown {name}'s items aren't kept between calls")
+        if enum["wrong"]:
+            errors.append(f"dropdown {name} shows wrong names: " + ", ".join(enum["wrong"]))
     return errors
 
 

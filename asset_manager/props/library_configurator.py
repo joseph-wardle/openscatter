@@ -2,6 +2,7 @@ import bpy
 from bpy.props import BoolProperty, CollectionProperty, EnumProperty, StringProperty
 from bpy.types import Context, UILayout
 
+from ...utils import enums
 from .base import BaseWidget
 
 
@@ -13,7 +14,7 @@ class LibraryPropertyWidget(BaseWidget):
 
     def enum_items(self, context: Context) -> list:
         items = self.selectable_items.keys()
-        return [(name, name, "") for name in items]
+        return enums.keep("configurator", self, [(name, name, "") for name in items])
 
     def update_value(self, context: Context):
         self.value_backup = self.value

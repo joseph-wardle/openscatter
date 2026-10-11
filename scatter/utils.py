@@ -3,19 +3,22 @@ from pathlib import Path
 
 import bpy
 
+from ..utils import enums
 from ..utils.getters import get_preferences
 
 
 def get_available_systems(self, context):
     objs = [
-        obj for obj in bpy.context.view_layer.objects if obj.gscatter.is_gscatter_system
+        obj
+        for obj in bpy.context.view_layer.objects
+        if obj is not None and obj.gscatter.is_gscatter_system
     ]
 
     items = []
     indices = itertools.count()
     for obj in objs:
         items.append((obj.name, obj.name, "", "OUTLINER_COLLECTION", next(indices)))
-    return items
+    return enums.keep("systems", self, items)
 
 
 def get_selected_asset(

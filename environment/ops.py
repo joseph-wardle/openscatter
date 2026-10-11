@@ -10,6 +10,7 @@ import bpy
 from bpy.types import Object, Operator
 from ..asset_manager.utils import create_asset_browser_entry, load_library
 from ..slow_task_manager.scopped_slow_task import StartSlowTask
+from ..utils import enums
 from ..utils.getters import (
     get_materials_in_system,
     get_preferences,
@@ -419,7 +420,7 @@ class AddNewEnvironmentPropertyOperator(Operator):
                 ):
                     inputs.append((inp.identifier, inp.name, inp.description))
         inputs.sort(key=lambda x: x[1])
-        return inputs
+        return enums.keep("environment_inputs", self, inputs)
 
     def update_effect(self, context):
         for effect in self.effects:

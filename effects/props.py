@@ -8,6 +8,7 @@ from .. import icons
 from ..asset_manager.ops.popup import AssetBrowserPopup
 from ..common.props import SceneProps, WindowManagerProps
 from ..icon_viewer.ops import IconViewerPopup
+from ..utils import enums
 from ..utils.getters import get_scene_props
 from . import default
 from .ops.effect_layers import (
@@ -133,7 +134,7 @@ class EffectProps(bpy.types.PropertyGroup):
         items = []
         for blend in self.blend_types.get_enabled():
             items.append((blend, blend.title(), ""))
-        return items
+        return enums.keep("added_blend_types", self, items)
 
     default_blend_type: bpy.props.EnumProperty(
         items=_get_added_blend_types, name="Default Blend Type"
@@ -286,7 +287,7 @@ class DropDownProps(bpy.types.PropertyGroup):
                     "Original Geometry",
                 ]:
                     items.append((output.identifier, output.name, ""))
-        return items
+        return enums.keep("dropdown", self, items)
 
     def update_dropdown(self, context):
         connected_to_socket: bpy.types.NodeSocket = None
@@ -377,7 +378,7 @@ class EffectLayerProps(bpy.types.PropertyGroup):
         items = []
         for blend_type in self.blend_types:
             items.append((blend_type, blend_type.title(), ""))
-        return items
+        return enums.keep("blend_types", self, items)
 
     invert: bpy.props.BoolProperty(
         name="Invert",

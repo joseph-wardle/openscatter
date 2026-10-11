@@ -28,7 +28,7 @@ from ... import icons
 
 # from functools import partial
 # from ..utils.trees import update_subivide_node
-from ...utils import main_collection
+from ...utils import enums, main_collection
 
 if TYPE_CHECKING:
     from ..props import EffectLayerProps
@@ -465,7 +465,7 @@ def enumerate_effects(self, context: bpy.types.Context):
             )
             enum.append((effect.id, effect.name, effect.description, icon, following))
 
-    return enum
+    return enums.keep("effects", self, enum)
 
 
 class AddEffectOperator(bpy.types.Operator):
@@ -571,7 +571,7 @@ def enum_categories(self, context: Context):
         for cat in supported_categories
     ]
 
-    return category_enum
+    return enums.keep("categories", self, category_enum)
 
 
 class DuplicateEffectOperator(bpy.types.Operator):
@@ -754,7 +754,7 @@ def get_available_effects(self, context: Context):
                 else node_group.gscatter.icon
             )
             items.append((node_group.name, node_group.name, "", icon, next(indices)))
-    return items
+    return enums.keep("available_effects", self, items)
 
 
 class AddExistingEffectOperator(bpy.types.Operator):
