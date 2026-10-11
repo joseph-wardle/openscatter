@@ -213,10 +213,13 @@ class CreateEnvironmentOperator(Operator):
             data_dir = environment_path.joinpath("data")
             data_dir.mkdir(exist_ok=True, parents=True)
             dest_blend_path = data_dir.joinpath("data.blend")
+            dest_blend_path.unlink(missing_ok=True)
 
             blender_cmd = [
-                blender_exec,
+                str(blender_exec),
                 "-b",
+                "--python-exit-code",
+                "1",
                 "-P",
                 script_path,
                 "--",
@@ -228,12 +231,23 @@ class CreateEnvironmentOperator(Operator):
                 str(dependency_images),
                 str(dependency_mats),
             ]
-            process = subprocess.Popen(blender_cmd, shell=True)
+            try:
+                process = subprocess.run(
+                    blender_cmd, capture_output=True, text=True, timeout=600
+                )
+                output = process.stdout + process.stderr
+                if process.returncode != 0:
+                    dest_blend_path.unlink(missing_ok=True)
+            except subprocess.TimeoutExpired:
+                output = "Blender took longer than 10 minutes"
+            if not dest_blend_path.exists():
+                print(output)
+                self.report(
+                    {"ERROR"},
+                    message="Couldn't create data.blend, see the console for details.",
+                )
+                return {"CANCELLED"}
 
-            while not dest_blend_path.exists():
-                time.sleep(0.5)
-
-            process.terminate()
             environment_data["terrain"] = terrain_data
             environment_data["blends"] = ["data/data.blend"]
             product_json = json.dumps(environment_data, indent=4)

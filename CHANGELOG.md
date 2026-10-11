@@ -15,6 +15,8 @@
 - Icons and asset previews are loaded by OpenScatter itself instead of the
   bundled t3dn-bip package, which added the user's Python packages folder to
   Blender's import path. Asset previews load about five times faster.
+- Creating an environment no longer hangs Blender on Linux and macOS. If
+  making its data.blend fails, it now shows an error instead of waiting forever.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

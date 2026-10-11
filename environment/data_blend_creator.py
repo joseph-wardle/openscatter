@@ -1,15 +1,17 @@
+import ast
 import bpy
 import sys
 
 # read command line arguments
-src_blend_path = sys.argv[5]
-dest_blend_path = sys.argv[6]
-material_names = eval(sys.argv[7])
+args = sys.argv[sys.argv.index("--") + 1 :]
+src_blend_path = args[0]
+dest_blend_path = args[1]
+material_names = ast.literal_eval(args[2])
 
-dependency_objs = eval(sys.argv[8])
-dependency_cols = eval(sys.argv[9])
-dependency_images = eval(sys.argv[10])
-dependency_mats = eval(sys.argv[11])
+dependency_objs = ast.literal_eval(args[3])
+dependency_cols = ast.literal_eval(args[4])
+dependency_images = ast.literal_eval(args[5])
+dependency_mats = ast.literal_eval(args[6])
 
 
 def create_safe_deps(data_set):
