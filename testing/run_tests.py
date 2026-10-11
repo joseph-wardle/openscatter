@@ -22,12 +22,14 @@ Tests:
   files    The library is in the extension's user folder, or GScatter's if
            there is one, unless another is chosen; nothing is made in
            Documents; the popups don't save the preferences; the extension's
-           own folder isn't changed; and disabling it removes the asset
-           library it added.
+           own folder isn't changed; Python's shared logging is left alone;
+           and disabling it removes the asset library it added.
   free_assets
            The free assets list and a download, from a fake local server,
            work, and nothing is requested with online access off; a broken
            or slow server and a cancelled download leave things as they were.
+           With experimental features on, the downloaded asset is added to
+           the asset browser, with its preview converted to PNG.
   undo     Each operator that changes the scene can be undone in one step.
            This needs Blender's interface, so it runs on a virtual display
            and is skipped if Xvfb isn't installed (or set XVFB to its path).
@@ -330,6 +332,10 @@ def check_files(result: dict) -> list[str]:
     errors = [message for key, message in checks.items() if not result[key]]
     if result["online_access"]:
         errors.append("online access is on in the test profile")
+    if result["root_logger"] != {"handlers": 0, "level": 30}:
+        errors.append(f"the root logger was changed: {result['root_logger']}")
+    if result["level_25_name"] != "Level 25":
+        errors.append(f"logging level 25 was renamed {result['level_25_name']!r}")
     if result["documents_used"]:
         errors.append("a folder was made in Documents")
     if result["userpref_saved"]:
@@ -371,7 +377,7 @@ def check_free_assets(result: dict) -> list[str]:
     if result["slow"]["seconds"] > 2.5:
         errors.append(f"slow server: took {result['slow']['seconds']} s despite the timeout")
 
-    for label in ("download", "download_broken", "cancel"):
+    for label in ("download", "download_broken", "cancel", "browser_download"):
         r = result[label]
         if "error" in r:
             errors.append(f"{label}: {r['error']}")
@@ -388,6 +394,20 @@ def check_free_assets(result: dict) -> list[str]:
         errors.append(f"failed downloads left files in the library: {result['leftovers']}")
     if result["offline_operator"]:
         errors.append("the Download button works with online access off")
+    if not all(result["references"].values()):
+        errors.append(f"finding assets from references failed: {result['references']}")
+    if not result["browser_blend"]:
+        errors.append("with experimental features, the asset browser file wasn't made")
+    elif result.get("browser_assets") != ["Test Plant Spring"]:
+        errors.append(
+            f"the asset browser file has assets {result.get('browser_assets')}, "
+            "not ['Test Plant Spring']"
+        )
+    preview = result.get("preview_png")
+    if not preview:
+        errors.append("the variant's BIP preview wasn't saved as a PNG")
+    elif not all(preview.values()):
+        errors.append(f"the variant's preview PNG is wrong: {preview}")
     return errors
 
 

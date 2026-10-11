@@ -12,7 +12,7 @@ from .base import BaseWidget
 from .. import previews
 from ..ops.popup import ReadDescriptionPopup, OpenPreviewPopup
 from ..ops.misc import SelectItemOperator, DummyOperator
-from ...utils import wrap_text
+from ...utils import paths, wrap_text
 from ...scatter.utils import draw_terrain_selector
 from ...utils.getters import get_wm_props
 
@@ -115,7 +115,7 @@ class EnvironmentWidget(BaseWidget):
         op = row.operator(
             SelectItemOperator.bl_idname, text=self.name, depress=self.select
         )
-        op.target, op.deselect = repr(self), False
+        op.target, op.deselect = paths.ref(self), False
 
     def draw_template(self, layout: UILayout, width=200):
         row = layout.row()
@@ -163,7 +163,7 @@ class EnvironmentWidget(BaseWidget):
         text_col = box.column(align=True)
         text_col.scale_y = 0.8
         op = row.operator(OpenPreviewPopup.bl_idname, text="", icon="SEQ_PREVIEW")
-        op.icon_id = repr(icon_id)
+        op.icon_id = icon_id
 
         text_lines = wrap_text(
             self.description, max(min(bpy.context.region.width * 1.5, 700), 400)

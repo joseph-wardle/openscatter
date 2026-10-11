@@ -91,10 +91,13 @@ and home folder, so your own setup and library aren't touched. Then it runs:
 - `files`: the library is kept in the extension's user folder, or GScatter's
   if there is one, unless another is chosen; nothing is made in Documents;
   the popups don't save your preferences; the extension's own folder isn't
-  changed; and disabling it removes the asset library it added.
+  changed; Python's shared logging is left alone; and disabling it removes
+  the asset library it added.
 - `free_assets`: the free asset list and a download, from a fake local
   server, work; nothing is requested with online access off; and a broken or
-  slow server or a cancelled download leaves things as they were.
+  slow server or a cancelled download leaves things as they were. With
+  experimental features on, the downloaded asset is added to the asset
+  browser, with its preview converted to PNG.
 - `undo`: each operator that changes the scene can be undone in one step.
   Undo needs Blender's interface, so this runs Blender on a virtual display
   and is skipped if [Xvfb](https://www.x.org/releases/current/doc/man/man1/Xvfb.1.xhtml)

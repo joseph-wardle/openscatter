@@ -11,12 +11,13 @@ class BaseWidget(PropertyGroup):
     @property
     def parent(self) -> "BaseWidget":
         """The property group this widget is in."""
-        return eval(repr(self).rpartition(".")[0])
+        # Paths like "gscatter.library.assets[3]"; items are by index, not name.
+        return self.id_data.path_resolve(self.path_from_id().rpartition(".")[0])
 
     @property
     def parent_collection(self) -> "bpy_prop_collection":
         """The collection this widget is in."""
-        return eval(repr(self).rpartition("[")[0])
+        return self.id_data.path_resolve(self.path_from_id().rpartition("[")[0])
 
 
 classes = (BaseWidget,)

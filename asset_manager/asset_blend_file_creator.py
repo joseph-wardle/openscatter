@@ -1,17 +1,22 @@
-import bpy
-import sys
+"""Make an asset browser .blend for an asset. Run by create_asset_browser_entry
+in a background Blender, without the add-on."""
+
+import importlib.util
+import json
 import pathlib
-import io
-from zlib import decompress
+import sys
+import zlib
+
+import bpy
 from mathutils import Matrix
 
-addon_name = "gscatter"
-
-try:
-    success = bpy.ops.preferences.addon_enable(module=addon_name)
-    from PIL import Image
-except ImportError:
-    print(addon_name, "is not found")
+# The add-on isn't loaded here, so load its BIP reader from its file.
+_spec = importlib.util.spec_from_file_location(
+    "openscatter_previews",
+    pathlib.Path(__file__).resolve().parent.parent / "utils" / "previews.py",
+)
+previews = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(previews)
 
 GRASWALD_CATALOG_ID = "b97f2a08-d271-44a3-bde4-aaf0554b37c"
 ASSETS_CATALOG_ID = "66e56e9d-4215-42a4-984d-a986d54e3fce"
@@ -40,11 +45,11 @@ blend_file_path = args[1]
 product_name = args[2]
 product_id = args[3]
 catalog_id = args[4]
-variants = eval(args[5])
+variants = json.loads(args[5])
 asset_type = args[6]
 preview = args[7]
-create_object_entry = eval(args[8])
-create_lod_collection_entry = eval(args[9])
+create_object_entry = json.loads(args[8])
+create_lod_collection_entry = json.loads(args[9])
 
 
 def save():
@@ -56,32 +61,6 @@ def create_collection(name, parent_collection=None):
     if parent_collection:
         parent_collection.children.link(collection)
     return collection
-
-
-def _bip_to_image(src, dst):
-    """Convert BIP to various image formats."""
-    _BIP2_MAGIC = b"BIP2"
-    with open(src, "rb") as bip:
-        if bip.read(4) != _BIP2_MAGIC:
-            raise ValueError("input is not a supported file format")
-
-        count = int.from_bytes(bip.read(1), "big")
-        assert count > 0, "the file contains no images"
-        bip.seek(8 * (count - 1), io.SEEK_CUR)
-
-        size = [int.from_bytes(bip.read(2), "big") for _ in range(2)]
-        length = int.from_bytes(bip.read(4), "big")
-
-        bip.seek(-length, io.SEEK_END)
-        content = decompress(bip.read(length))
-        image = Image.frombytes("RGBa", size, content)
-        image = image.convert("RGBA")
-        image = image.transpose(Image.FLIP_TOP_BOTTOM)
-
-        try:
-            image.save(dst)
-        except OSError:
-            image.convert("RGB").save(dst)
 
 
 if asset_type == "3D_PLANT":
@@ -220,16 +199,14 @@ if asset_type == "3D_PLANT":
                     if pathlib.Path(variant["preview"]).exists() and not variant[
                         "preview"
                     ].startswith("."):
-                        _bip_to_image(
-                            src=pathlib.Path(variant["preview"]),
-                            dst=pathlib.Path(
-                                variant["preview"].replace(".bip", ".png")
-                            ),
+                        previews.save_bip_as_png(
+                            variant["preview"],
+                            variant["preview"].replace(".bip", ".png"),
                         )
                         bpy.ops.ed.lib_id_load_custom_preview(
                             filepath=variant["preview"].replace(".bip", ".png")
                         )
-                except ImportError:
+                except (OSError, ValueError, zlib.error):
                     bpy.ops.ed.lib_id_generate_preview()
         # time.sleep(1)
     if is_vol1:

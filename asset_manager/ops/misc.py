@@ -4,7 +4,7 @@ import bpy
 
 from ...utils.logger import debug
 from ..configurators import configure
-from ...utils import main_collection, getters
+from ...utils import main_collection, getters, paths
 
 if TYPE_CHECKING:
     from ...common.props import WindowManagerProps
@@ -31,7 +31,7 @@ class SelectItemOperator(bpy.types.Operator):
     deselect: bpy.props.BoolProperty(name="Deselect")
 
     def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set:
-        target = eval(self.target)
+        target = paths.resolve(self.target)
         library: "LibraryWidget" = target.parent
         collection = target.parent_collection
 
@@ -77,7 +77,7 @@ class UseItemOperator(bpy.types.Operator):
         effect = effects[self.effect_name]
 
         source = main_collection(sub="Sources")
-        target = eval(self.target)
+        target = paths.resolve(self.target)
 
         col = configure(target)
         if col.name not in source.children:
@@ -122,7 +122,7 @@ class ScrollDetailsOperator(bpy.types.Operator):
     direction: bpy.props.IntProperty(name="Direction")
 
     def execute(self, context: bpy.types.Context) -> set:
-        previews = eval(self.previews)
+        previews = paths.resolve(self.previews)
 
         previews.index += self.direction
         previews.index %= len(previews.details)

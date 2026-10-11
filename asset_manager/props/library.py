@@ -1,3 +1,4 @@
+import json
 import math
 from typing import Union
 
@@ -144,7 +145,7 @@ class LibraryWidget(BaseWidget):
                 else self.free_assets,
             )
         )
-        self.result = repr(result)
+        self.result = json.dumps([widget.path_from_id() for widget in result])
 
         if result:
             number_of_pages = self.number_of_pages()
@@ -171,7 +172,7 @@ class LibraryWidget(BaseWidget):
 
     def filtered_assets(self) -> list[AssetWidget]:
         if self.result:
-            return eval(self.result)
+            return [self.id_data.path_resolve(path) for path in json.loads(self.result)]
         else:
             return (
                 self.assets.values()

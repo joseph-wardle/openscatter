@@ -16,7 +16,7 @@ from bpy.props import (
 )
 from bpy.types import OperatorProperties, UILayout
 
-from ...utils import background, wrap_text
+from ...utils import background, paths, wrap_text
 from ...utils.getters import (
     get_allow_networking,
     get_asset_browser_dir,
@@ -85,7 +85,7 @@ class FreeAssetWidget(BaseWidget):
             depress=self.select,
             icon="CHECKMARK" if library.get_asset(self.asset_id) else "NONE",
         )
-        op.target, op.deselect = repr(self), False
+        op.target, op.deselect = paths.ref(self), False
 
     def draw_compact(self, layout: UILayout):
         library = self.parent
@@ -126,7 +126,7 @@ class FreeAssetWidget(BaseWidget):
         )
         row.operator(
             OpenPreviewPopup.bl_idname, text="", icon="SEQ_PREVIEW"
-        ).icon_id = repr(self.icon_id())
+        ).icon_id = self.icon_id()
 
         box = main_col.box()
         text_col = box.column(align=True)

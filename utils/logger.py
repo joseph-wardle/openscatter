@@ -1,24 +1,29 @@
 import logging
 import sys
 
-from .getters import get_preferences
-
 SUCCESS_LEVEL_NUM = 25
-logging.addLevelName(SUCCESS_LEVEL_NUM, "SUCCESS")
 
 
-def success(self, message, *args, **kwargs):
-    if self.isEnabledFor(SUCCESS_LEVEL_NUM):
-        self._log(SUCCESS_LEVEL_NUM, message, args, **kwargs)
+class _Formatter(logging.Formatter):
+    def format(self, record):
+        # Named here rather than with logging.addLevelName, which would rename
+        # level 25 for every logger in Blender.
+        if record.levelno == SUCCESS_LEVEL_NUM:
+            record.levelname = "SUCCESS"
+        return super().format(record)
 
 
-logging.Logger.success = success
-
-logging.basicConfig(
-    format="OpenScatter - %(filename)s:%(lineno)d - %(levelname)s: %(message)s",
-    level=20,
-)
+# The add-on's own logger and handler, so the root logger, which Blender and
+# other add-ons share, is left alone.
 logger: logging.Logger = logging.getLogger(__name__)
+logger.handlers.clear()  # from an earlier enable
+_handler = logging.StreamHandler()
+_handler.setFormatter(
+    _Formatter("OpenScatter - %(filename)s:%(lineno)d - %(levelname)s: %(message)s")
+)
+logger.addHandler(_handler)
+logger.propagate = False
+logger.setLevel(SUCCESS_LEVEL_NUM)
 
 
 def update_log_level(level: int | str):
@@ -50,39 +55,14 @@ def warn(*args, sep=" ", end="\n"):
 
 def success(*args, sep=" ", end="\n"):
     msg = sep.join(map(str, args)) + end.strip("\n")  # Mimics print behavior
-    logger.success(msg)
+    logger.log(SUCCESS_LEVEL_NUM, msg)
 
 
 def error(*args, sep=" ", end="\n"):
     msg = sep.join(map(str, args)) + end.strip("\n")  # Mimics print behavior
-    prefs = get_preferences()
-    DEBUG_ENABLED = prefs.enable_developer_mode
     code = sys._getframe().f_back.f_code
-    if (debug and DEBUG_ENABLED) or not debug:
-        logger.error(
-            f"\n{code.co_name} in {code.co_filename}:{code.co_firstlineno}>: {msg}",
-            stacklevel=2,
-        )
+    logger.error(
+        f"\n{code.co_name} in {code.co_filename}:{code.co_firstlineno}>: {msg}",
+        stacklevel=2,
+    )
 
-
-def try_catch(function):
-    def protected(*args, **kwargs):
-        try:
-            return function(*args, **kwargs)
-        except Exception as e:
-            logging.warning("FAILED TO RUN %s \n %s" % (str(function), str(e)))
-            return None
-
-    return protected
-
-
-def annotate(f):
-    name = str(f).split(" ")[1]
-
-    def f2(*args, **kwargs):
-        debug(f"{name}(...): ==>")
-        ret = f(*args, **kwargs)
-        debug(f"    {name} <== {ret}")
-        return ret
-
-    return f2

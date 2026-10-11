@@ -2,6 +2,7 @@ import bpy
 from bpy.props import BoolProperty, StringProperty
 from bpy.types import UILayout
 
+from ...utils import paths
 from ..ops.misc import SelectItemOperator
 from .base import BaseWidget
 
@@ -14,7 +15,7 @@ class TagWidget(BaseWidget):
         op = layout.operator(
             SelectItemOperator.bl_idname, text=self.name, depress=self.select
         )
-        op.target = repr(self)
+        op.target = paths.ref(self)
         op.deselect = False
 
 

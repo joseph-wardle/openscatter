@@ -8,7 +8,7 @@ from .. import icons
 from ..asset_manager.ops.popup import AssetBrowserPopup
 from ..common.props import SceneProps, WindowManagerProps
 from ..icon_viewer.ops import IconViewerPopup
-from ..utils import enums
+from ..utils import enums, paths
 from ..utils.getters import get_scene_props
 from . import default
 from .ops.effect_layers import (
@@ -239,7 +239,7 @@ class EffectProps(bpy.types.PropertyGroup):
         else:
             icon = self.icon if self.icon else "NONE"
             op = split.operator(IconViewerPopup.bl_idname, text=icon, icon=icon)
-        op.target = repr(self)
+        op.target = paths.ref(self)
 
     def is_valid(self) -> bool:
         if self.name == "":

@@ -402,6 +402,7 @@ def create_asset_browser_entry(
     blender_cmd = [
         blender_exec,
         "-b",
+        "--factory-startup",  # the script needs no add-ons or preferences
         "-P",
         script_path,
         "--",
@@ -410,11 +411,11 @@ def create_asset_browser_entry(
         product_data["name"],
         product_id,
         catalog_id,
-        str(variants),
+        json.dumps(variants),
         asset_type,
         environment_preview,
-        str(create_object_entry),
-        str(create_lod_collection_entry),
+        json.dumps(create_object_entry),
+        json.dumps(create_lod_collection_entry),
     ]
     process = subprocess.call(blender_cmd)
 

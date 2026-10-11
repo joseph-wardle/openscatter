@@ -20,11 +20,11 @@ class OpenPreviewPopup(bpy.types.Operator):
     bl_label = "Open Asset Preview"
     bl_description = "Show the full-size preview in a popup"
 
-    icon_id: bpy.props.StringProperty()
+    icon_id: bpy.props.IntProperty()
 
     def draw(self, context):
         layout = self.layout
-        icon_id = eval(self.icon_id)
+        icon_id = self.icon_id
         ui_scale = ui_scale = bpy.context.preferences.system.ui_scale
         layout.template_icon(
             icon_value=icon_id,

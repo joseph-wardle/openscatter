@@ -427,6 +427,75 @@ def shared(module: str, folder: str) -> dict:
     return result
 
 
+def make_bip(width: int, height: int) -> bytes:
+    """A BIP image of a gradient, with colour multiplied by alpha as in
+    Graswald's, which is different upside down and in each channel."""
+    import zlib
+
+    pixels = bytearray()
+    for y in range(height):
+        for x in range(width):
+            alpha = 255 if x < width // 2 else 128
+            for value in (x * 255 // width, y * 255 // height, 200):
+                pixels.append(value * alpha // 255)
+            pixels.append(alpha)
+    data = zlib.compress(bytes(pixels))
+    header = width.to_bytes(2, "big") + height.to_bytes(2, "big") + len(data).to_bytes(4, "big")
+    return b"BIP2" + bytes([1]) + header + data
+
+
+def plant_files() -> dict:
+    """The files of an asset with one variant, Spring, as Graswald makes them."""
+    import tempfile
+
+    collection = bpy.data.collections.new("Spring")
+    lod = bpy.data.collections.new("Spring_Plant_lod0")
+    collection.children.link(lod)
+    mesh = bpy.data.meshes.new("Spring_Plant_lod0")
+    mesh.from_pydata([(0, 0, 0), (1, 0, 0), (0, 1, 0)], [], [(0, 1, 2)])
+    obj = bpy.data.objects.new("Test_Spring_Plant_lod0", mesh)
+    lod.objects.link(obj)
+    obj.active_material = bpy.data.materials.new("Spring")
+    if not obj.active_material.node_tree:  # Blender 5 always has one
+        obj.active_material.use_nodes = True
+    with tempfile.TemporaryDirectory() as folder:
+        path = os.path.join(folder, "data.blend")
+        bpy.data.libraries.write(path, {collection}, fake_user=True)
+        data = open(path, "rb").read()
+    for block, items in ((bpy.data.objects, [obj]), (bpy.data.meshes, [mesh]),
+                         (bpy.data.collections, [lod, collection])):
+        for item in items:
+            block.remove(item)
+    bpy.data.materials.remove(bpy.data.materials["Spring"])
+
+    variant = {
+        "name": "Test Plant Spring",
+        "description": "A test",
+        "tags": ["Spring"],
+        "url": "",
+        "author": "openscatter",
+        "previews": {"gallery": "spring.bip", "details": ["spring.bip"]},
+        "blends": ["data/data.blend"],
+        "configurator": {
+            "name": "graswald_two",
+            "attributes": {"Variant": "Spring"},
+            "properties": {"Level Of Detail": ["0"]},
+        },
+    }
+    product = {
+        "name": "Test Plant",
+        "assets": ["spring.json"],
+        "description": "A test",
+        "authors": {"openscatter": {"name": "OpenScatter", "icon": "spring.bip", "url": ""}},
+    }
+    return {
+        "product.json": json.dumps(product),
+        "spring.json": json.dumps(variant),
+        "spring.bip": make_bip(16, 8),
+        "data/data.blend": data,
+    }
+
+
 class FakeServer:
     """A local stand-in for Graswald's server, which records what's requested.
 
@@ -451,7 +520,8 @@ class FakeServer:
 
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w") as z:
-            z.writestr("Test Plant/product.json", json.dumps({"name": "Test Plant"}))
+            for name, data in plant_files().items():
+                z.writestr("Test Plant/" + name, data)
         self.files = {"/icon.bip": icon, "/asset.zip": archive.getvalue()}
         self.requests = []
         server = self
@@ -555,6 +625,7 @@ def free_assets(module: str) -> dict:
         free.get_asset_browser_dir().joinpath("free_assets.json").exists()
     )
     result["offline"] = load("/list", allow_networking=False)
+
     result["broken"] = load("/broken")
     free.TIMEOUT = (2, 1)
     result["slow"] = load("/slow")
@@ -562,11 +633,59 @@ def free_assets(module: str) -> dict:
     assets_dir = asset_utils.user_library().joinpath("Assets")
     result["download"] = download("/asset.zip")
     result["installed"] = assets_dir.joinpath("Test Plant", "product.json").exists()
+
+    # Operators find assets from strings that refer to them, without eval().
+    paths = importlib.import_module(module + ".utils.paths")
+    asset_utils.load_library()
+    library.browse_type = "ASSETS"
+    library.update_search(bpy.context)
+    asset = library.assets[0] if library.assets else None
+    result["references"] = {
+        "loaded": asset is not None,
+        "resolve": asset is not None and paths.resolve(paths.ref(asset)) == asset,
+        "parent": asset is not None and asset.parent == library,
+        "parent_collection": asset is not None and asset.parent_collection == library.assets,
+        "filtered": library.filtered_assets() == list(library.assets),
+    }
     result["download_broken"] = download("/broken")
     result["cancel"] = download("/trickle.zip", cancel=True)
     result["leftovers"] = sorted(
         p.name for p in assets_dir.glob("*") if p.name != "Test Plant"
     )
+
+    # With experimental features, the asset is also added to the asset browser,
+    # by a script run in another Blender.
+    import shutil
+
+    free.FREE_ASSETS_JSON_LIST_URL = server.url("/list")
+    bpy.context.preferences.addons[module].preferences.enable_experimental_features = True
+    background.wait()
+    shutil.rmtree(assets_dir.joinpath("Test Plant"))
+    result["browser_download"] = download("/asset.zip")
+    blend = free.get_asset_browser_dir().joinpath("Test Plant.blend")
+    result["browser_blend"] = blend.exists()
+    if blend.exists():
+        with bpy.data.libraries.load(str(blend), assets_only=True) as (data_from, _):
+            result["browser_assets"] = list(data_from.collections)
+    png = assets_dir.joinpath("Test Plant", "spring.png")
+    if png.exists():
+        image = bpy.data.images.load(str(png))
+        size, pixels = importlib.import_module(module + ".utils.previews").read_bip(
+            str(assets_dir.joinpath("Test Plant", "spring.bip"))
+        )[-1]
+        # BIP pixels are bottom-up RGBA bytes with colour multiplied by alpha.
+        expected = pixels.tobytes()
+        png = image.pixels[:]
+        premultiplied = [
+            round(png[i] * (png[i - i % 4 + 3] if i % 4 != 3 else 1) * 255)
+            for i in range(len(png))
+        ]
+        result["preview_png"] = {
+            "size_matches": tuple(image.size) == size,
+            "visible": max(png[3::4]) > 0,
+            "pixels_match": len(premultiplied) == len(expected)
+            and max(abs(a - b) for a, b in zip(premultiplied, expected)) <= 2,
+        }
 
     for m in (free, library_module):
         m.get_allow_networking = lambda: False
@@ -592,6 +711,11 @@ def files(module: str) -> dict:
     package = pathlib.Path(importlib.import_module(module).__file__).parent
     before = folder_hashes(package)
     result["online_access"] = bpy.app.online_access
+    import logging
+
+    root = logging.getLogger()
+    result["root_logger"] = {"handlers": len(root.handlers), "level": root.level}
+    result["level_25_name"] = logging.getLevelName(25)
 
     getters = importlib.import_module(module + ".utils.getters")
     default = bpy.utils.extension_path_user(module, path="library")

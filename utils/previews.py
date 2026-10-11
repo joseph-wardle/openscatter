@@ -41,6 +41,25 @@ def read_bip(path: str) -> list:
     return images
 
 
+def save_bip_as_png(src: str, dst: str):
+    """Save the largest image in a BIP file as a PNG, which Blender can read."""
+    import numpy
+
+    size, pixels = read_bip(src)[-1]
+    rgba = numpy.frombuffer(pixels.tobytes(), numpy.uint8).reshape(-1, 4) / numpy.float32(255)
+    # BIP colours are multiplied by alpha; PNG's aren't. Both are bottom-up.
+    alpha = rgba[:, 3:]
+    numpy.divide(rgba[:, :3], alpha, out=rgba[:, :3], where=alpha > 0)
+    image = bpy.data.images.new("OpenScatter BIP", *size, alpha=True)
+    try:
+        image.pixels.foreach_set(rgba.ravel())
+        image.filepath_raw = str(dst)
+        image.file_format = "PNG"
+        image.save()
+    finally:
+        bpy.data.images.remove(image)
+
+
 def is_bip(path: str) -> bool:
     try:
         with open(path, "rb") as file:

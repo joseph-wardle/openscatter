@@ -3,7 +3,7 @@ from bpy.props import BoolProperty, CollectionProperty, StringProperty, PointerP
 from bpy.types import UILayout
 
 from ...common.ops import OpenUrlOperator
-from ...utils import wrap_text
+from ...utils import paths, wrap_text
 from ..ops.misc import (
     DummyOperator,
     ScrollDetailsOperator,
@@ -69,7 +69,7 @@ class AssetWidget(BaseWidget):
         op = row.operator(
             SelectItemOperator.bl_idname, text=self.name, depress=self.select
         )
-        op.target, op.deselect = repr(self), False
+        op.target, op.deselect = paths.ref(self), False
 
     def draw_details(self, layout: UILayout):
         main_col = layout.column(align=True)
@@ -84,19 +84,19 @@ class AssetWidget(BaseWidget):
         op = row.operator(
             ScrollDetailsOperator.bl_idname, text="", icon="TRIA_LEFT", emboss=False
         )
-        op.previews = repr(self.previews)
+        op.previews = paths.ref(self.previews)
         op.direction = -1
         row.operator(
             DummyOperator.bl_idname, text=self.name, emboss=False, depress=True
         )
 
         op = row.operator(OpenPreviewPopup.bl_idname, text="", icon="SEQ_PREVIEW")
-        op.icon_id = repr(icon_id)
+        op.icon_id = icon_id
 
         op = row.operator(
             ScrollDetailsOperator.bl_idname, text="", icon="TRIA_RIGHT", emboss=False
         )
-        op.previews = repr(self.previews)
+        op.previews = paths.ref(self.previews)
         op.direction = 1
 
         if self.description:
@@ -150,14 +150,14 @@ class AssetWidget(BaseWidget):
         row = row.row()
         row.alignment = "RIGHT"
         op = row.operator(SelectItemOperator.bl_idname, text="", icon="X", emboss=False)
-        op.target = repr(self)
+        op.target = paths.ref(self)
         op.deselect = True
 
     def draw_item(self, layout: UILayout, effect_name: str, input_name: str):
         row = layout.row(align=True)
         row.scale_y = 1.6
         op = row.operator(UseItemOperator.bl_idname, text=self.name)
-        op.target = repr(self)
+        op.target = paths.ref(self)
         op.effect_name = effect_name
         op.input_name = input_name
 

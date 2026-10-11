@@ -46,6 +46,14 @@
   the extension's folder, except in developer mode.
 - Disabling the add-on removes the Graswald asset library it added to
   Blender's preferences with experimental features on.
+- Adding assets to the asset browser, an experimental feature, works again.
+  It enabled the old GScatter add-on in the Blender it starts for this, and
+  needed the Pillow package, which was removed; previews are now converted
+  without it, and that Blender starts without your add-ons and preferences.
+- OpenScatter's messages no longer change how Blender and other add-ons log,
+  and errors are logged even outside developer mode.
+- The add-on no longer uses `eval()` to find the asset, tag or icon a button
+  is for.
 - Disabling the add-on now removes all its handlers, so they no longer cause
   errors once it's unloaded.
 - The Info panel is shown even when Blender's online access is off, and has a

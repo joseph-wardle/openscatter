@@ -120,11 +120,7 @@ def set_effect_properties(
             elif effect_id == "system.distribute_on_faces":
                 effect.effect_node.inputs["Seed"].default_value = random.randint(0, 100)
         except Exception as e:
-            error(
-                "Failed to set effect default value for %s %e" % effect.name % e,
-                debug=True,
-            )
-            pass
+            error(f"Failed to set effect default value for {effect.name}: {e}")
 
         if skip_params_check:
             continue

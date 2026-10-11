@@ -15,6 +15,7 @@ from ..asset_browser import refresh_library, set_catalog_id
 from ..utils import create_asset_browser_entry
 from ...effects.store import effectstore, effectpresetstore
 from ...scatter.store import scattersystempresetstore
+from ...utils import paths
 from ...utils.getters import get_asset_browser_dir, get_user_library
 from ...utils import background
 from ...utils.logger import debug, error, success
@@ -513,7 +514,7 @@ class SyncInstalledAssetsOperator(Operator):
                 new = self.assets.add()
                 name = getattr(asset, "product_name", asset.name)
                 new.name = name
-                new.target = repr(asset)
+                new.target = paths.ref(asset)
                 new.id = asset.asset_id
                 not_availalble.add(asset.asset_id)
 
@@ -529,7 +530,7 @@ class SyncInstalledAssetsOperator(Operator):
         # Read everything the thread needs now, as it mustn't touch Blender's data.
         jobs = []
         for asset_data in selected:
-            asset: "OldAssetItem" = eval(asset_data.target)
+            asset: "OldAssetItem" = paths.resolve(asset_data.target)
             jobs.append(Path(asset.blends[0].name).parent.parent)
         asset_browser_dir = get_asset_browser_dir(context)
         create_object_entry = self.create_object_entry
@@ -583,7 +584,7 @@ class SyncInstalledAssetsOperator(Operator):
         with StartSlowTask("Installing Assets", total) as task:
             for i in range(total):
                 asset_data = selected[i]
-                asset = eval(asset_data.target)
+                asset = paths.resolve(asset_data.target)
                 name = getattr(asset, "product_name", asset.name)
                 task.set_progress(i)
                 task.set_progress_text(

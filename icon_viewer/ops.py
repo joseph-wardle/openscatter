@@ -1,5 +1,6 @@
 from typing import Protocol
 from .. import icons
+from ..utils import paths
 import bpy
 
 from .utils import get_icon_viewer_props
@@ -19,7 +20,7 @@ class IconViewerPopup(bpy.types.Operator):
 
     def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set[str]:
         icon_viewer_props = get_icon_viewer_props(context)
-        target: IconViewerTarget = eval(self.target)
+        target: IconViewerTarget = paths.resolve(self.target)
 
         icon_viewer_props.update(context)
         icon_viewer_props.select(target.icon)
@@ -30,7 +31,7 @@ class IconViewerPopup(bpy.types.Operator):
 
     def execute(self, context: bpy.types.Context) -> set[str]:
         icon_viewer_props = get_icon_viewer_props(context)
-        target: IconViewerTarget = eval(self.target)
+        target: IconViewerTarget = paths.resolve(self.target)
 
         if target.icon != icon_viewer_props.selected:
             self.report({"INFO"}, f"Set icon to {icon_viewer_props.selected}")
