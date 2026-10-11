@@ -13,23 +13,27 @@ class _Formatter(logging.Formatter):
         return super().format(record)
 
 
-# The add-on's own logger and handler, so the root logger, which Blender and
-# other add-ons share, is left alone.
+# Messages go up to the root logger like any library's, so whatever handles
+# those (by default, Python prints warnings and errors) gets OpenScatter's too.
+# Only developer mode adds a handler, to print everything to the console.
 logger: logging.Logger = logging.getLogger(__name__)
 logger.handlers.clear()  # from an earlier enable
 _handler = logging.StreamHandler()
 _handler.setFormatter(
     _Formatter("OpenScatter - %(filename)s:%(lineno)d - %(levelname)s: %(message)s")
 )
-logger.addHandler(_handler)
-logger.propagate = False
-logger.setLevel(SUCCESS_LEVEL_NUM)
 
 
-def update_log_level(level: int | str):
-    """Callback to update log level."""
-    logger.setLevel(level)
-    logger.info(f"Log level updated to {level}")
+def set_developer_mode(enabled: bool):
+    """Print all of OpenScatter's messages in developer mode, otherwise leave
+    them to the root logger's settings."""
+    if enabled:
+        logger.setLevel(logging.DEBUG)
+        if _handler not in logger.handlers:
+            logger.addHandler(_handler)
+    else:
+        logger.setLevel(logging.NOTSET)
+        logger.removeHandler(_handler)
 
 
 def debug(*args, sep=" ", end="\n"):
@@ -66,3 +70,10 @@ def error(*args, sep=" ", end="\n"):
         stacklevel=2,
     )
 
+
+def register():
+    pass
+
+
+def unregister():
+    set_developer_mode(False)

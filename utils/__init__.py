@@ -5,10 +5,10 @@
 import blf
 import bpy
 
-from . import startup
+from . import logger, startup
 from .getters import get_preferences
 
-modules = (startup,)
+modules = (logger, startup)
 
 
 def register():

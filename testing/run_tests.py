@@ -22,8 +22,9 @@ Tests:
   files    The library is in the extension's user folder, or GScatter's if
            there is one, unless another is chosen; nothing is made in
            Documents; the popups don't save the preferences; the extension's
-           own folder isn't changed; Python's shared logging is left alone;
-           and disabling it removes the asset library it added.
+           own folder isn't changed; Python's shared logging is left alone
+           and gets OpenScatter's messages; and disabling it removes the
+           asset library it added.
   free_assets
            The free assets list and a download, from a fake local server,
            work, and nothing is requested with online access off; a broken
@@ -334,6 +335,12 @@ def check_files(result: dict) -> list[str]:
         errors.append("online access is on in the test profile")
     if result["root_logger"] != {"handlers": 0, "level": 30}:
         errors.append(f"the root logger was changed: {result['root_logger']}")
+    expected_logging = {
+        "plain": {"received": ["warning", "debug"], "handlers": 0, "handlers_after": 0},
+        "developer": {"handlers": 1, "level": 10},
+    }
+    if result["logging"] != expected_logging:
+        errors.append(f"logging isn't as expected: {result['logging']}")
     if result["level_25_name"] != "Level 25":
         errors.append(f"logging level 25 was renamed {result['level_25_name']!r}")
     if result["documents_used"]:

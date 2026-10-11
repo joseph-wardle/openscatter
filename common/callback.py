@@ -34,7 +34,7 @@ def set_active_object_as_scatter_surface(self, dep: bpy.types.Depsgraph):
 
 def default_log_level():
     prefs = get_preferences()
-    logger.logger.setLevel(0 if prefs.enable_developer_mode else 25)  # Default level
+    logger.set_developer_mode(prefs.enable_developer_mode)
 
 
 def tutorial_popup_handler(cl=None, clx=None):

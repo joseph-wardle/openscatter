@@ -50,8 +50,10 @@
   It enabled the old GScatter add-on in the Blender it starts for this, and
   needed the Pillow package, which was removed; previews are now converted
   without it, and that Blender starts without your add-ons and preferences.
-- OpenScatter's messages no longer change how Blender and other add-ons log,
-  and errors are logged even outside developer mode.
+- OpenScatter no longer changes how other add-ons' messages are logged. Its
+  own messages go through Python's logging like other add-ons', so the
+  console shows its warnings and errors, now even outside developer mode,
+  and developer mode shows everything.
 - The add-on no longer uses `eval()` to find the asset, tag or icon a button
   is for.
 - Disabling the add-on now removes all its handlers, so they no longer cause

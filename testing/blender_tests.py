@@ -717,6 +717,25 @@ def files(module: str) -> dict:
     result["root_logger"] = {"handlers": len(root.handlers), "level": root.level}
     result["level_25_name"] = logging.getLevelName(25)
 
+    # Messages reach handlers on the root logger, and developer mode prints
+    # them all with a handler of its own, which it removes again.
+    log = importlib.import_module(module + ".utils.logger")
+    received = []
+    catcher = logging.Handler(logging.DEBUG)
+    catcher.emit = received.append
+    root.addHandler(catcher)
+    root.setLevel(logging.DEBUG)
+    log.warn("warning")
+    log.debug("debug")
+    plain = {"received": [r.getMessage() for r in received], "handlers": len(log.logger.handlers)}
+    prefs.enable_developer_mode = True
+    developer = {"handlers": len(log.logger.handlers), "level": log.logger.level}
+    prefs.enable_developer_mode = False
+    plain["handlers_after"] = len(log.logger.handlers)
+    root.removeHandler(catcher)
+    root.setLevel(logging.WARNING)
+    result["logging"] = {"plain": plain, "developer": developer}
+
     getters = importlib.import_module(module + ".utils.getters")
     default = bpy.utils.extension_path_user(module, path="library")
     result["library"] = str(getters.get_library_dir()) == default

@@ -7,14 +7,12 @@ from ..asset_manager.callbacks import create_library
 from ..scatter.store import scattersystempresetstore
 from ..utils import enums
 from ..utils.getters import get_library_dir, get_package, get_preferences
-from ..utils.logger import update_log_level
+from ..utils.logger import set_developer_mode
 from .props import ProxySettingsProps
 
 
 def set_loglevel(self, dephs):
-    prefs = get_preferences()
-    loglevel = 0 if prefs.enable_developer_mode else 25
-    update_log_level(loglevel)
+    set_developer_mode(get_preferences().enable_developer_mode)
 
 
 def _get_system_presets(self, context):
